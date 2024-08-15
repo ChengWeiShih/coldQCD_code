@@ -1,0 +1,17 @@
+Universe           = vanilla
+Initialdir         = /sphenix/user/ChengWei/coldQCD_code/ForwardCaloNtuplizer/macro
+Executable         = run_job.sh
+PeriodicHold       = (NumJobStarts>=1 && JobStatus == 1)
+request_memory     = 6GB
+Priority           = 20
+job_lease_duration = 86400
+runnumber          = 48029
+Nevent             = -1
+input_filename     = /sphenix/tg/tg01/coldqcd/cwshih/test/test_run_$(runnumber)/GL1_selfgen_DST/gl1-000$(runnumber)-$INT(process,%04d).root
+output_directory   = /sphenix/tg/tg01/coldqcd/cwshih/test/test_run_$(runnumber)/GL1_selfgen_DST/ntuple_file_2
+outputFile         = ntuple_run$(runnumber)_$INT(process,%05d).root
+Output             = $(output_directory)/CW_log/condor_$(process).out
+Error              = $(output_directory)/CW_log/condor_$(process).err
+Log                = $(output_directory)/CW_log/condor_$(process).log
+Arguments          = "$(process) $(Nevent) $(input_filename) $(output_directory) $(outputFile)"
+Queue 2267

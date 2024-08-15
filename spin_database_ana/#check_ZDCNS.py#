@@ -1,0 +1,145 @@
+import numpy as np
+
+import psycopg2 # note : the interface of the psql and python
+import psycopg2.extras
+import pandas as pd
+
+import matplotlib.pyplot as plt
+
+import argparse
+
+import time
+
+def initialize_psql_server(hostname, database, username, pwd, port_id):
+    try : 
+        conn = psycopg2.connect (host = hostname, dbname = database, user = username, password = pwd, port = port_id) 
+        # cur = conn.cursor()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        return cur, conn
+   except Exception as error : 
+        print(error)
+
+def show_cali_table(cur,conn, run_script) : 
+    
+    cur.execute(run_script)
+    colnames = [desc[0] for desc in cur.description]
+    df = pd.DataFrame(data = cur.fetchall(), columns = colnames)
+    # print(df)
+    # print(df.to_string())
+
+
+    conn.commit()
+
+    return df
+
+daq_hostname = 'sphnxdaqdbreplica1.sdcc.bnl.gov'
+daq_database = 'daq'
+daq_username = 'phnxrc'
+daq_pwd      = 'admin_test' # note : not pretty sure it is correct or not.
+daq_port_id  = '5432'
+
+run_duration_cut = 10
+run_runnumber_cut = 1
+run_year_cut = 2024
+mbd_index = 10
+ZDC_index = 3
+run_type_cut = 'physics'
+polarization_cut = 25
+N_ZDCNS_evt_cut = 500
+
+
+run_ZDCcoinevt_script = '''
+   SELECT 
+        run.runnumber, 
+        run.runtype, 
+        run.brtimestamp, 
+        ROUND(EXTRACT(EPOCH FROM (run.ertimestamp - run.brtimestamp)) / 60, 3) AS duration, 
+        gl1_scalers.index, 
+        gl1_scalers.raw,
+        gl1_scalers.live,
+        ROUND(gl1_scalers.live::numeric / gl1_scalers.raw::numeric, 3) AS live_rate,
+        gl1_scalers.scaled
+    FROM run 
+    INNER JOIN gl1_scalers ON run.runnumber = gl1_scalers.runnumber 
+    WHERE EXTRACT(YEAR FROM run.brtimestamp) = %i 
+    AND run.runtype = '%s' 
+    AND run.runnumber > %i 
+    AND gl1_scalers.index = %i -- ZDCNS coincidence
+    AND EXTRACT(YEAR FROM run.ertimestamp) = %i
+    ORDER BY run.brtimestamp DESC
+'''%(run_year_cut, run_type_cut, run_runnumber_cut, ZDC_index, run_year_cut)
+
+def main():
+
+    parser = argparse.ArgumentParser(description='Example script with command-line arguments.')
+
+    # note : Add arguments
+    parser.add_argument('N_row', type=int, help='Number of rows to show')
+    # parser.add_argument('age', type=int, help='Your age')
+    parser.add_argument('--RatePlot', action='store_true', help='Make ZDCNS rate plot')
+    parser.add_argument('--category', action='store_true', help='Categorize the runs')
+    parser.add_argument('--new', action='store_true', help='Only display the new runs')
+    parser.add_argument('--time', action='store_true', help='only display the runs longer than specific time')
+
+    # note : Parse the arguments
+    args = parser.parse_args()
+
+    daq_cur,daq_conn = initialize_psql_server(daq_hostname, daq_database, daq_username, daq_pwd, daq_port_id)
+
+    run_ZDCevt_df = show_cali_table(daq_cur,daq_conn, run_ZDCcoinevt_script)
+    run_ZDCevt_df['ZDC_scaled_rate'] = (run_ZDCevt_df['scaled'].astype(float) / (run_ZDCevt_df['duration'].astype(float) * 60.0)) # note : Hz
+    run_ZDCevt_df['ZDC_scaled_rate'] = run_ZDCevt_df['ZDC_scaled_rate'].round(2)
+
+
+    if args.category:
+        good_duration = 3
+        good_live_rate = 0.7
+
+        if args.new:
+            short_run_ZDCevt_df = run_ZDCevt_df.copy()
+            short_run_ZDCevt_df.query('runnumber >= %i' % args.N_row, inplace=True)
+        elif args.time:
+            short_run_ZDCevt_df = run_ZDCevt_df.copy()
+            short_run_ZDCevt_df.query('duration >= %i' % args.N_row, inplace=True)
+        else:
+            short_run_ZDCevt_df = run_ZDCevt_df.iloc[0:args.N_row,:].copy()        
+        
+
+        short_run_ZDCevt_df['run_tag'] = 0
+        short_run_ZDCevt_df.loc[(short_run_ZDCevt_df['live_rate'] > 0.7) & (short_run_ZDCevt_df['duration'] > 3) & (short_run_ZDCevt_df['scaled'] > 10), 'run_tag'] = 1111111
+        cols = short_run_ZDCevt_df.columns.tolist()
+        cols.insert(1, cols.pop(cols.index('run_tag')))
+        short_run_ZDCevt_df = short_run_ZDCevt_df[cols]
+        print((short_run_ZDCevt_df.iloc[0:args.N_row,:]).to_string())
+
+        
+    else:
+        if args.new:
+            short_run_ZDCevt_df = run_ZDCevt_df.copy()
+            short_run_ZDCevt_df.query('runnumber >= %i' % args.N_row, inplace=True)
+        else:
+            short_run_ZDCevt_df = run_ZDCevt_df.iloc[0:args.N_row,:].copy()
+
+        print(short_run_ZDCevt_df.to_string())
+
+
+    if args.RatePlot:
+        run_ZDCevt_df_cut = run_ZDCevt_df.query('duration > 10 and scaled > 200', inplace=False)
+        plt.figure(figsize=(10, 5))
+        # plt.scatter(run_ZDCevt_df_cut['brtimestamp'], run_ZDCevt_df_cut['ZDC_scaled_rate'], label='ZDC scaled trigger rate', color = 'orange', s=15)
+        plt.plot(run_ZDCevt_df_cut['brtimestamp'], run_ZDCevt_df_cut['ZDC_scaled_rate'], 'o-', label='ZDC scaled trigger rate', color = 'orange', markersize=5)
+        plt.axhline(y=200, color='r', linestyle='--', label='200 Hz line')
+        plt.axhline(y=100, color='b', linestyle='--', label='100 Hz line')
+        plt.axhline(y=50, color='g', linestyle='--', label='50 Hz line')
+        plt.xlabel('brtimestamp')
+        plt.ylabel('Average ZDC scaled trigger rate [Hz]')
+        plt.title('brtimestamp vs. ZDC scaled trigger rate')
+        plt.xticks(rotation=45)
+        plt.legend()
+        plt.tight_layout()
+        plt.yscale('log')
+        plt.show()
+
+
+if __name__ == '__main__':
+    main()
