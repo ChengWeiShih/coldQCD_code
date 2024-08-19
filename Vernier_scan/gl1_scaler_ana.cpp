@@ -7,7 +7,8 @@ gl1_scaler_ana::gl1_scaler_ana(
     vector<pair<int,int>> range_t_V_in,
     vector<pair<int,int>> range_t_H_in, 
     bool NCollision_corr_in, 
-    bool beam_intensity_corr_in
+    bool beam_intensity_corr_in,
+    bool accidental_correction_in
 )
 : 
 input_directory(input_directory_in), 
@@ -18,8 +19,10 @@ range_t_H(range_t_H_in),
 demo_factor(80.), 
 NCollision_corr(NCollision_corr_in),
 beam_intensity_corr(beam_intensity_corr_in),
+accidental_correction(accidental_correction_in),
 detector_selection("MBDNS"),
-global_ana_counting(0)
+global_ana_counting(0),
+BPM_StdDev(false)
 {
     live_trigger_vec = 0;
 
@@ -251,6 +254,8 @@ global_ana_counting(0)
     multi_collision_correction_H.clear();
     outlier_rejection_factor_vecV.clear();
     outlier_rejection_factor_vecH.clear();
+    accidental_correction_V.clear();
+    accidental_correction_H.clear();
 }
 
 void gl1_scaler_ana::SetDetectorName(string detector_name) {
@@ -574,6 +579,7 @@ std::pair<TGraphErrors *, TGraphErrors *> gl1_scaler_ana::CombineMacro(string de
     final_output_directory = output_directory + "/" + detector_selection;
     if (NCollision_corr) final_output_directory += "_NCorr";
     if (beam_intensity_corr) final_output_directory += "_ICorr";
+    if (accidental_correction) final_output_directory += "_AcciCorr";
     system(Form("mkdir -p %s", final_output_directory.c_str()));
     
     only_raw_rate_tag = only_raw_rate_tag_in;
@@ -695,7 +701,8 @@ void gl1_scaler_ana::PrepareData()
         DetectorNS_rate_avg_vecV_error,
         outlier_rejection_factor_vecV,
         multi_collision_correction_V,
-        fit_gaus_vecV
+        fit_gaus_vecV,
+        accidental_correction_V
     );
 
     // note : for horizontal
@@ -712,7 +719,8 @@ void gl1_scaler_ana::PrepareData()
         DetectorNS_rate_avg_vecH_error,
         outlier_rejection_factor_vecH,
         multi_collision_correction_H,
-        fit_gaus_vecH
+        fit_gaus_vecH,
+        accidental_correction_H
     );
 }
 
@@ -729,7 +737,8 @@ void gl1_scaler_ana::PrepareData_subfunc(
     vector<double> &DetectorNS_rate_avg_vec_All_error,
     vector<pair<double,double>> &outlier_rejection_factor_vec_All,
     vector<double> &multi_collision_correction_All,
-    vector<TF1 *> &fit_gaus_vec_All
+    vector<TF1 *> &fit_gaus_vec_All,
+    vector<double> &accidental_correction_All
 )
 {
     // note : the time range of each scan step, for the case of vertical scan
@@ -840,7 +849,7 @@ void gl1_scaler_ana::PrepareData_subfunc(
         // <<TMath::Poisson(2,poisson_lambda)<<", "
         // <<TMath::Poisson(3,poisson_lambda)<<", "
         // <<TMath::Poisson(4,poisson_lambda)<<"}, multi-collision rate : "<<multi_collision_ratio<<" estimated total collision : "<<estimated_total_collision<<" correction : "<<the_correction<<endl;
-        cout<<"Vertical : "<<poisson_lambda<<" "
+        cout<<direction_string<<" : "<<poisson_lambda<<" "
         << TMath::Poisson(0,poisson_lambda)<<" "
         << TMath::Poisson(1,poisson_lambda)<<" "
         << TMath::Poisson(2,poisson_lambda)<<" "
@@ -874,6 +883,32 @@ void gl1_scaler_ana::PrepareData_subfunc(
 
         cout<<"=================================== =================================== =================================== ==================================="<<endl;
     }
+
+    // note : for the accidental correction factor of ZDCNS
+    // note : method quoted from Angelica's method
+    if (detector_selection == "ZDCNS")
+    {
+        for (int i = 0; i < step_selected_T_range_All.size(); i++)
+        {
+            double duration_second = (step_selected_T_range_All[i].second - step_selected_T_range_All[i].first) * bco_span;
+            double Ntrigger_ZDCNS = step_counting_range_All[i].second - step_counting_range_All[i].first;
+            double Ntrigger_ZDCN = time_ZDCN_raw_counting[range_t_All[i].second].back() - time_ZDCN_raw_counting[range_t_All[i].first].front();
+            double Ntrigger_ZDCS = time_ZDCS_raw_counting[range_t_All[i].second].back() - time_ZDCS_raw_counting[range_t_All[i].first].front();
+
+            double ZDCNS_rate = fit_vec_All[i]->GetParameter(0); // note : the ZDCNS rate from the fitting
+            double ZDCN_rate = Ntrigger_ZDCN / duration_second;
+            double ZDCS_rate = Ntrigger_ZDCS / duration_second;
+            double ZDCBY = (ZDCN_rate * ZDCS_rate) / (n_bunches * fbeam);
+            double ZDC_StandardCorrected = ZDCNS_rate - ZDCBY;
+            double ZDCNS_log_corr = (n_bunches * fbeam) * (-1.0*TMath::Log(1.0-ZDC_StandardCorrected/((fbeam*n_bunches+ZDCNS_rate)-ZDCN_rate-ZDCS_rate)));
+
+            // cout<<direction_string<<" scan step "<<i<<" : ZDCNS rate : "<<ZDCNS_rate<<" Hz, ZDCN rate : "<<ZDCN_rate<<" Hz, ZDCS rate : "<<ZDCS_rate<<" Hz, ZDCBY : "<<ZDCBY<<" Hz, ZDC_StandardCorrected : "<<ZDC_StandardCorrected<<" Hz, ZDCNS_log_corr : "<<ZDCNS_log_corr<<" Hz"<<endl;
+
+            accidental_correction_All.push_back(ZDCNS_log_corr / ZDCNS_rate);
+            cout<<direction_string<<" scan step "<<i<<" acci_correction : "<<ZDCNS_log_corr / ZDCNS_rate<<endl;
+
+        }
+    }
 }
 
 void gl1_scaler_ana::CombineData()
@@ -892,12 +927,17 @@ void gl1_scaler_ana::CombineData()
             cout<<endl;
             Y_point = Y_point * BeamIntensity_corr_V[i];
         }
+        if (accidental_correction) {
+            cout<<"Vertical Scan : "<<Y_point<<" Hz, Accidental Correction factor : "<<accidental_correction_V[i]<<endl;
+            cout<<endl;
+            Y_point = Y_point * accidental_correction_V[i];
+        }
 
         gr_BPM_raw_detectorNS_rate_V -> SetPoint(i, Average_BPM_pos_V[i], Y_point);
-        gr_BPM_raw_detectorNS_rate_V -> SetPointError(i, 0, DetectorNS_rate_avg_vecV_error[i]);
+        gr_BPM_raw_detectorNS_rate_V -> SetPointError(i, StdDev_BPM_pos_V[i], DetectorNS_rate_avg_vecV_error[i]);
 
         gr_BPM_raw_detectorNS_rate_V_demo -> SetPoint(i, Average_BPM_pos_V[i], Y_point);
-        gr_BPM_raw_detectorNS_rate_V_demo -> SetPointError(i, 0, DetectorNS_rate_avg_vecV_error[i] * demo_factor);
+        gr_BPM_raw_detectorNS_rate_V_demo -> SetPointError(i, StdDev_BPM_pos_V[i], DetectorNS_rate_avg_vecV_error[i] * demo_factor);
     }
 
     for (int i = 0; i < range_t_H.size(); i++)
@@ -912,12 +952,17 @@ void gl1_scaler_ana::CombineData()
             cout<<endl;
             Y_point = Y_point * BeamIntensity_corr_H[i];
         }
+        if (accidental_correction) {
+            cout<<"Horizontal Scan : "<<Y_point<<" Hz, Accidental Correction factor : "<<accidental_correction_H[i]<<endl;
+            cout<<endl;
+            Y_point = Y_point * accidental_correction_H[i];
+        }
 
         gr_BPM_raw_detectorNS_rate_H -> SetPoint(i, Average_BPM_pos_H[i], Y_point);
-        gr_BPM_raw_detectorNS_rate_H -> SetPointError(i, 0, DetectorNS_rate_avg_vecH_error[i]);
+        gr_BPM_raw_detectorNS_rate_H -> SetPointError(i, StdDev_BPM_pos_H[i], DetectorNS_rate_avg_vecH_error[i]);
 
         gr_BPM_raw_detectorNS_rate_H_demo -> SetPoint(i, Average_BPM_pos_H[i], Y_point);
-        gr_BPM_raw_detectorNS_rate_H_demo -> SetPointError(i, 0, DetectorNS_rate_avg_vecH_error[i] * demo_factor);
+        gr_BPM_raw_detectorNS_rate_H_demo -> SetPointError(i, StdDev_BPM_pos_H[i], DetectorNS_rate_avg_vecH_error[i] * demo_factor);
     }
 
     cout<<"Vertical scan : "<<endl;
@@ -1158,7 +1203,7 @@ void gl1_scaler_ana::DrawPlots()
     gr_BPM_raw_detectorNS_rate_V -> Draw("AP");
     gr_BPM_raw_detectorNS_rate_V_demo -> Draw("Psame");
     fit_Gaus_V -> Draw("lsame");
-    draw_text -> DrawLatex(0.22, 0.88, Form("#splitline{Error bars are timed by %.0f for visibility,}{original error bars included in the fit}", demo_factor));
+    draw_text -> DrawLatex(0.22, 0.88, Form("#splitline{Y error bars are timed by %.0f for visibility,}{original error bars included in the fit}", demo_factor));
     draw_text -> DrawLatex(0.22, 0.80, Form("Fit height: %.3f #pm %.3f", fit_Gaus_V->GetParameter(0), fit_Gaus_V->GetParError(0)));
     draw_text -> DrawLatex(0.22, 0.76, Form("Fit mean: %.3f #pm %.6f mm", fit_Gaus_V->GetParameter(1), fit_Gaus_V->GetParError(1)));
     draw_text -> DrawLatex(0.22, 0.72, Form("Fit width: %.5f #pm %.6f mm", fit_Gaus_V->GetParameter(2), fit_Gaus_V->GetParError(2)));
@@ -1174,7 +1219,7 @@ void gl1_scaler_ana::DrawPlots()
     gr_BPM_raw_detectorNS_rate_H -> Draw("AP");
     gr_BPM_raw_detectorNS_rate_H_demo -> Draw("Psame");
     fit_Gaus_H -> Draw("lsame");
-    draw_text -> DrawLatex(0.22, 0.88, Form("#splitline{Error bars are timed by %.0f for visibility,}{original error bars included in the fit}", demo_factor));
+    draw_text -> DrawLatex(0.22, 0.88, Form("#splitline{Y error bars are timed by %.0f for visibility,}{original error bars included in the fit}", demo_factor));
     draw_text -> DrawLatex(0.22, 0.80, Form("Fit height: %.3f #pm %.3f", fit_Gaus_H->GetParameter(0), fit_Gaus_H->GetParError(0)));
     draw_text -> DrawLatex(0.22, 0.76, Form("Fit mean: %.3f #pm %.6f mm", fit_Gaus_H->GetParameter(1), fit_Gaus_H->GetParError(1)));
     draw_text -> DrawLatex(0.22, 0.72, Form("Fit width: %.5f #pm %.6f mm", fit_Gaus_H->GetParameter(2), fit_Gaus_H->GetParError(2)));
@@ -1284,13 +1329,14 @@ double gl1_scaler_ana::tg_stddev (TGraph * input_tgraph) {
 	return sqrt( sum_subt / double(input_vector.size()-1) );
 }	
 
-void gl1_scaler_ana::ImportCADReadings(string cad_reading_directory)
+void gl1_scaler_ana::ImportCADReadings(string cad_reading_directory, bool SD_column)
 {
-    std::ifstream file(cad_reading_directory);
+    std::ifstream file(cad_reading_directory.c_str());
 
     if (!file.is_open()) {
         std::cerr << "Could not open the file!" << std::endl;
-        return;
+        std::cout<< "Please check the file path : "<<cad_reading_directory<<std::endl;
+        exit(1);
     }
 
     std::string line;
@@ -1299,14 +1345,17 @@ void gl1_scaler_ana::ImportCADReadings(string cad_reading_directory)
     std::getline(file, line);
 
     // Vectors to store the data from each column
-    std::vector<double> Average_H;
-    std::vector<double> DCCT_correction_H;
-    std::vector<double> Average_V;
-    std::vector<double> DCCT_correction_V;
-    std::vector<float> DCCT_B_avg;
-    std::vector<float> DCCT_B_std;
-    std::vector<float> DCCT_Y_avg;
-    std::vector<float> DCCT_Y_std;
+    std::vector<double> Average_H; Average_H.clear();
+    std::vector<double> DCCT_correction_H; DCCT_correction_H.clear();
+    std::vector<double> Average_V; Average_V.clear();
+    std::vector<double> DCCT_correction_V; DCCT_correction_V.clear();
+    std::vector<float> DCCT_B_avg; DCCT_B_avg.clear();
+    std::vector<float> DCCT_B_std; DCCT_B_std.clear();
+    std::vector<float> DCCT_Y_avg; DCCT_Y_avg.clear();
+    std::vector<float> DCCT_Y_std; DCCT_Y_std.clear();
+
+    std::vector<double> StdDev_H; StdDev_H.clear();
+    std::vector<double> StdDev_V; StdDev_V.clear();
 
     while (std::getline(file, line)) {
         std::stringstream ss(line);
@@ -1336,6 +1385,18 @@ void gl1_scaler_ana::ImportCADReadings(string cad_reading_directory)
 
         std::getline(ss, cell, '\t');
         DCCT_Y_std.push_back(std::stof(cell));
+
+        if (SD_column) {
+            std::getline(ss, cell, '\t');
+            StdDev_H.push_back(std::stof(cell));
+
+            std::getline(ss, cell, '\t');
+            StdDev_V.push_back(std::stof(cell));
+        }
+        else {
+            StdDev_H.push_back(0);
+            StdDev_V.push_back(0);
+        }
     }
 
     file.close();
@@ -1348,11 +1409,14 @@ void gl1_scaler_ana::ImportCADReadings(string cad_reading_directory)
               << std::setw(15) << "DCCT_B_avg"
               << std::setw(15) << "DCCT_B_std"
               << std::setw(15) << "DCCT_Y_avg"
-              << std::setw(15) << "DCCT_Y_std"
+              << std::setw(15) << "DCCT_Y_std"            
+              << std::setw(15) << "StdDev_H"
+              << std::setw(15) << "StdDev_V"
+
               << std::endl;
 
     // Determine the maximum number of elements
-    size_t maxSize = std::max({Average_H.size(), DCCT_correction_H.size(), Average_V.size(), DCCT_correction_V.size(), DCCT_B_avg.size(), DCCT_B_std.size(), DCCT_Y_avg.size(), DCCT_Y_std.size()});
+    size_t maxSize = std::max({Average_H.size(), DCCT_correction_H.size(), Average_V.size(), DCCT_correction_V.size(), DCCT_B_avg.size(), DCCT_B_std.size(), DCCT_Y_avg.size(), DCCT_Y_std.size(), StdDev_H.size(), StdDev_V.size()});
 
     // Print the content of the vectors
     for (size_t i = 0; i < maxSize; ++i) {
@@ -1364,13 +1428,19 @@ void gl1_scaler_ana::ImportCADReadings(string cad_reading_directory)
                   << std::setw(15) << (i < DCCT_B_std.size() ? std::to_string(DCCT_B_std[i]) : "")
                   << std::setw(15) << (i < DCCT_Y_avg.size() ? std::to_string(DCCT_Y_avg[i]) : "")
                   << std::setw(15) << (i < DCCT_Y_std.size() ? std::to_string(DCCT_Y_std[i]) : "")
+                  << std::setw(15) << (i < StdDev_H.size() ? std::to_string(StdDev_H[i]) : "")
+                  << std::setw(15) << (i < StdDev_V.size() ? std::to_string(StdDev_V[i]) : "")
+                  
                   << std::endl;
     }
 
+    BPM_StdDev = SD_column;
 
     Average_BPM_pos_V = Average_V;
+    StdDev_BPM_pos_V = StdDev_V;
     BeamIntensity_corr_V = DCCT_correction_V;
     Average_BPM_pos_H = Average_H;
+    StdDev_BPM_pos_H = StdDev_H;
     BeamIntensity_corr_H = DCCT_correction_H;
     DCCT_B = DCCT_B_avg[0];
     DCCT_Y = DCCT_Y_avg[0];

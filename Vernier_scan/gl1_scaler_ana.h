@@ -35,13 +35,15 @@ class gl1_scaler_ana
             string output_directory_in, 
             vector<pair<int,int>> range_t_V_in,
             vector<pair<int,int>> range_t_H_in,
-            bool NCollision_corr_in = true, 
-            bool beam_intensity_corr_in = true
+            bool NCollision_corr_in, 
+            bool beam_intensity_corr_in,
+            bool accidental_correction_in
         );
         void PrepareRate(string input_file_directory = "null");
         void OutputRawRate(string output_file_directory);
         void SetDetectorName(string detector_name);
-        void ImportCADReadings(string cad_reading_directory);
+        void SetDemoFactor(double demo_factor_in) {demo_factor = demo_factor_in;}
+        void ImportCADReadings(string cad_reading_directory, bool SD_column = false);
         std::pair<TGraphErrors *, TGraphErrors *> CombineMacro(string detector_name, bool only_raw_rate_tag_in = false);
         void SetNcollision_corr(bool NCollision_corr_in) {NCollision_corr = NCollision_corr_in;}
         void SetBeamIntensity_corr(bool beam_intensity_corr_in) {beam_intensity_corr = beam_intensity_corr_in;}
@@ -72,7 +74,8 @@ class gl1_scaler_ana
             vector<double> &DetectorNS_rate_avg_vec_All_error,
             vector<pair<double,double>> &outlier_rejection_factor_vec_All,
             vector<double> &multi_collision_correction_All,
-            vector<TF1 *> &fit_gaus_vec_All
+            vector<TF1 *> &fit_gaus_vec_All,
+            vector<double> &accidental_correction_All
         );
 
         // note : variables for the constructor
@@ -82,6 +85,7 @@ class gl1_scaler_ana
         string final_output_directory;
         bool NCollision_corr;
         bool beam_intensity_corr;
+        bool accidental_correction;
         string detector_selection;
 
         TFile * file_in;
@@ -156,12 +160,17 @@ class gl1_scaler_ana
         map<int, pair<long long, long long>> step_counting_range_V;
         map<int, pair<long long, long long>> step_selected_T_range_H;
         map<int, pair<long long, long long>> step_counting_range_H;
+        // note : maybe mainly for MBD
         vector<double> multi_collision_correction_V;
         vector<double> multi_collision_correction_H;
 
+        // note : maybe mainly for ZDC
+        vector<double> accidental_correction_V;
+        vector<double> accidental_correction_H;
 
         // note : Y
         vector<double> Average_BPM_pos_V;
+        vector<double> StdDev_BPM_pos_V;
         vector<double> BeamIntensity_corr_V;
         vector<pair<int,int>> range_t_V;
         vector<double> DetectorNS_rate_avg_vecV;
@@ -169,6 +178,7 @@ class gl1_scaler_ana
 
         // note : X
         vector<double> Average_BPM_pos_H;
+        vector<double> StdDev_BPM_pos_H;
         vector<double> BeamIntensity_corr_H;
         vector<pair<int,int>> range_t_H;
         vector<double> DetectorNS_rate_avg_vecH;
@@ -213,10 +223,11 @@ class gl1_scaler_ana
 
         string detector_pool[6] = {"ZDCS", "ZDCN", "ZDCNS", "MBDS", "MBDN", "MBDNS"};
 
+        bool BPM_StdDev;
 
         // note : for calculate the machine luminosity, and the detector cross section
         double um2_to_mb = 1.0e-19;
-        double fbeam = 78 * 1000; // note : 78 kHz
+        double fbeam = 78.4 * 1000; // note : 78 kHz
         double machine_lumi;
         double detector_cross_section;
         double DCCT_B; // note : the average beam intensity of the BLUE beam

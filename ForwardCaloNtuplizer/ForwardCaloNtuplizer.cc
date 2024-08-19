@@ -91,11 +91,12 @@
 R__LOAD_LIBRARY (libuspin.so)
 
 //____________________________________________________________________________..
-ForwardCaloNtuplizer::ForwardCaloNtuplizer(const std::string &name, const std::string output_directory_in, const std::string file_out_name_in, const bool &with_waveform_in)
+ForwardCaloNtuplizer::ForwardCaloNtuplizer(const std::string &name, const std::string output_directory_in, const std::string file_out_name_in, const bool &with_waveform_in, const bool &get_mbd_z_in)
 :SubsysReco(name), 
 output_directory(output_directory_in),
 file_out_name(file_out_name_in),
 with_waveform(with_waveform_in),
+get_mbd_z(get_mbd_z_in),
 evtID(0)
 { 
     std::cout << "ForwardCaloNtuplizer::ForwardCaloNtuplizer(const std::string &name) Calling ctor" << std::endl; 
@@ -221,6 +222,7 @@ int ForwardCaloNtuplizer::Init(PHCompositeNode *topNode)
     tree_out -> Branch("evtBCO_gl1", &evtBCO_gl1);
     tree_out -> Branch("evtBCO_zdc", &evtBCO_zdc);
     tree_out -> Branch("bunchnumber", &bunchnumber);
+    tree_out -> Branch("mbd_z_vtx", &mbd_z_vtx);
     
 
     tree_out -> Branch("GTMBusyVector_Decimal", &GTMBusyVector_Decimal);
@@ -323,7 +325,7 @@ int ForwardCaloNtuplizer::process_event(PHCompositeNode *topNode)
         std::cout << std::endl;
     }
 
-    p_gl1 = findNode::getClass<Gl1Packetv2>(topNode, "GL1RAWHIT" /*"GL1Packet"*/); // note : for the selfgen DST, it may be the "GL1RAWHIT"
+    p_gl1 = findNode::getClass<Gl1Packetv2>(topNode, /*"GL1RAWHIT"*/ /**/ "GL1Packet"); // note : for the selfgen DST, it may be the "GL1RAWHIT"
     // zdc_cont = findNode::getClass<CaloPacketContainerv1>(topNode, "ZDCPackets");
 
     bunchnumber = -999;
@@ -334,6 +336,7 @@ int ForwardCaloNtuplizer::process_event(PHCompositeNode *topNode)
     trigger_input_decimal = -999;
     live_trigger_decimal = -999;
     scaled_trigger_decimal = -999;
+    mbd_z_vtx = -999;
 
     for (auto &GL1pair : GL1Scalers_map)
     {
@@ -355,6 +358,14 @@ int ForwardCaloNtuplizer::process_event(PHCompositeNode *topNode)
         trigger_input_vec = ForwardCaloNtuplizer::prepare_trigger_vec(trigger_input_decimal);
         live_trigger_vec = ForwardCaloNtuplizer::prepare_trigger_vec(live_trigger_decimal);
         scaled_trigger_vec = ForwardCaloNtuplizer::prepare_trigger_vec(scaled_trigger_decimal);
+
+        if (get_mbd_z){
+            prepare_mbd_z(topNode);
+            if (evtID % 10000 == 0)
+            {
+                std::cout<<"reco. MBD vertex Z : "<<mbd_z_vtx<<" cm "<<std::endl;
+            }
+        }
 
         // for (int i = 0; i < 16; i++) { std::cout<<p_gl1->lValue(i, "GL1PRAW")<<" "; }
         // std::cout<<std::endl;
@@ -542,6 +553,27 @@ std::vector<float> ForwardCaloNtuplizer::anaWaveformFast(CaloPacket *p, const in
   std::vector<float> result;
   result = fitresults_zdc.at(0);
   return result;
+}
+
+void ForwardCaloNtuplizer::prepare_mbd_z(PHCompositeNode *topNode)
+{
+    if (Verbosity() >= VERBOSITY_MORE)
+        std::cout << "Get centrality info." << std::endl;
+    
+    m_mbdvtxmap = findNode::getClass<MbdVertexMapv1>(topNode, "MbdVertexMap");
+    if (!m_mbdvtxmap)
+    {
+        std::cout << "Error, can't find MbdVertexMap" << std::endl;
+        exit(1);
+    }
+
+    std::cout << "MbdVertexMap size: " << m_mbdvtxmap->size() << std::endl;
+    for (MbdVertexMap::ConstIter biter = m_mbdvtxmap->begin(); biter != m_mbdvtxmap->end(); ++biter)
+    {
+        m_mbdvtx = biter->second;
+        mbd_z_vtx = m_mbdvtx->get_z();
+    }
+
 }
 
 //____________________________________________________________________________..

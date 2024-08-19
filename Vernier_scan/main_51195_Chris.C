@@ -11,35 +11,35 @@ int main_51195_Chris()
 
 
     vector<pair<int,int>> range_t_V = {
-        {},
-        {},
-        {},
-        {},
-        {},
-        {},
+        {786, 858},
+        {871, 902},
+        {918, 953},
+        {969, 1007},
+        {1020, 1070},
+        {1082, 1197},
 
-        {},
-        {},
-        {},
-        {},
-        {},
-        {}
+        {1210, 1239},
+        {1257, 1290},
+        {1305, 1339},
+        {1354, 1391},
+        {1404, 1456},
+        {1469, 1582}
     };
 
     vector<pair<int,int>> range_t_H = {
-        {},
-        {},
-        {},
-        {},
-        {},
-        {},
+        {6, 50},
+        {64,96},
+        {113,146},
+        {162,195},
+        {213,262},
+        {277,389},
 
-        {},
-        {},
-        {},
-        {},
-        {},
-        {}
+        {404,433},
+        {449,479},
+        {495, 531},
+        {548, 581},
+        {597, 646},
+        {659, 774}
     };
 
     gl1_scaler_ana * MBDNS_ana = new gl1_scaler_ana(
@@ -47,14 +47,62 @@ int main_51195_Chris()
         input_filename, 
         output_directory,
         range_t_V,
-        range_t_H
+        range_t_H,
+        true, // note : NCollision
+        true, // note : beam_intensity
+        false // note : accidental_corr
     );
     // MBDNS_ana->PrepareRate((input_directory + "/" + output_data_filename).c_str());
-    MBDNS_ana->PrepareRate();
-    MBDNS_ana->OutputRawRate((input_directory + "/" + output_data_filename).c_str());
-    // MBDNS_ana->ImportCADReadings("/sphenix/tg/tg01/coldqcd/cwshih/test/test_run_48029/CAD_reading/plots/CAD_reading_48029.csv");
-    bool only_raw_rate_tag = true;
+    // MBDNS_ana->PrepareRate();
+    // MBDNS_ana->OutputRawRate((input_directory + "/" + output_data_filename).c_str());
+    MBDNS_ana->PrepareRate((input_directory + "/" + output_data_filename).c_str());
+    MBDNS_ana->ImportCADReadings("/sphenix/tg/tg01/coldqcd/cwshih/test/run_51195/CAD_reading/plots/CAD_reading_51195.csv", true);
+    bool only_raw_rate_tag = false;
     pair<TGraphErrors *, TGraphErrors *> MBDNS_tgrE = MBDNS_ana->CombineMacro("MBDNS", only_raw_rate_tag);
     
+
+
+
+    gl1_scaler_ana * ZDCNS_ana = new gl1_scaler_ana(
+        input_directory, 
+        input_filename, 
+        output_directory,
+        range_t_V,
+        range_t_H,
+        false, // note : NCollision
+        true, // note : beam_intensity
+        true // note : accidental_corr
+    );
+    ZDCNS_ana->SetDemoFactor(15.);
+    // ZDCNS_ana->PrepareRate((input_directory + "/" + output_data_filename).c_str());
+    // ZDCNS_ana->PrepareRate();
+    // ZDCNS_ana->OutputRawRate((input_directory + "/" + output_data_filename).c_str());
+    ZDCNS_ana->PrepareRate((input_directory + "/" + output_data_filename).c_str());
+    ZDCNS_ana->ImportCADReadings("/sphenix/tg/tg01/coldqcd/cwshih/test/run_51195/CAD_reading/plots/CAD_reading_51195.csv", true);
+    only_raw_rate_tag = false;
+    pair<TGraphErrors *, TGraphErrors *> ZDCNS_tgrE = ZDCNS_ana->CombineMacro("ZDCNS", only_raw_rate_tag);
+
+
+
+    gl1_scaler_ana * ZDCNS_NoCorr_ana = new gl1_scaler_ana(
+        input_directory, 
+        input_filename, 
+        output_directory,
+        range_t_V,
+        range_t_H,
+        false, // note : NCollision
+        true, // note : beam_intensity
+        false // note : accidental_corr
+    );
+    ZDCNS_NoCorr_ana->SetDemoFactor(15.);
+    // ZDCNS_NoCorr_ana->PrepareRate((input_directory + "/" + output_data_filename).c_str());
+    // ZDCNS_NoCorr_ana->PrepareRate();
+    // ZDCNS_NoCorr_ana->OutputRawRate((input_directory + "/" + output_data_filename).c_str());
+    ZDCNS_NoCorr_ana->PrepareRate((input_directory + "/" + output_data_filename).c_str());
+    ZDCNS_NoCorr_ana->ImportCADReadings("/sphenix/tg/tg01/coldqcd/cwshih/test/run_51195/CAD_reading/plots/CAD_reading_51195.csv", true);
+    only_raw_rate_tag = false;
+    pair<TGraphErrors *, TGraphErrors *> ZDCNS_NoCorr_tgrE = ZDCNS_NoCorr_ana->CombineMacro("ZDCNS", only_raw_rate_tag);
+
+
     return 0;
 }
