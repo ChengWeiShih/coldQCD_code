@@ -92,8 +92,6 @@ void Fun4All_ForwardCalo(
     // note : ------------------ ------------------ ------------------ for the ZDC ------------------ ------------------ ------------------ 
     CaloTowerDefs::BuilderType buildertype = CaloTowerDefs::kPRDFTowerv4;
 
-    cout<<55555<<endl;
-
     CaloTowerBuilder *caZDC = new CaloTowerBuilder("ZDCBUILDER");
     caZDC->set_detector_type(CaloTowerDefs::ZDC);
     caZDC->set_builder_type(buildertype);
@@ -102,19 +100,14 @@ void Fun4All_ForwardCalo(
     caZDC->set_offlineflag();
     se->registerSubsystem(caZDC);
 
-    cout<<66666<<endl;
-
     //ZDC Reconstruction--Calib Info
     ZdcReco *zdcreco = new ZdcReco();
     se->registerSubsystem(zdcreco);
-
-    cout<<77777<<endl;
 
     /////////////////////////////////////////////////////
     // Set status of towers, Calibrate towers,  Cluster
     Process_Calo_Calib();
 
-    cout<<88888<<endl;
 
     // note : ------------------ ------------------ ------------------ for the ZDC ------------------ ------------------ ------------------ 
 
