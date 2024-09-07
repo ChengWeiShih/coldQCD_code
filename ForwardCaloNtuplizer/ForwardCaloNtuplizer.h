@@ -45,7 +45,8 @@ class ForwardCaloNtuplizer : public SubsysReco
             const std::string output_directory_in = "/sphenix/tg/tg01/coldqcd/cwshih/test/test_run_48082",
             const std::string file_out_name_in = "output.root",
             const bool &with_waveform_in = true,
-            const bool &get_mbd_z_in = true
+            const bool &get_mbd_z_in = true,
+            const bool &get_zdc_z_in = true
         );
 
         struct FC_unit {
@@ -114,10 +115,13 @@ class ForwardCaloNtuplizer : public SubsysReco
         std::string file_out_name;
         bool with_waveform;
         bool get_mbd_z;
+        bool get_zdc_z;
 
         CaloWaveformFitting *WaveformProcessingFast = nullptr;
         Gl1Packet *p_gl1;
         CaloPacketContainer *zdc_cont;
+
+        TowerInfoContainer *towers_ZDC = nullptr;
 
         MbdVertexMapv1 *m_mbdvtxmap = nullptr;
         MbdVertex *m_mbdvtx = nullptr;
@@ -125,6 +129,7 @@ class ForwardCaloNtuplizer : public SubsysReco
         std::vector<float> anaWaveformFast(CaloPacket *p, const int channel);
         static std::vector<int> prepare_trigger_vec(long long trigger_input);
         void prepare_mbd_z(PHCompositeNode *topNode);
+        void prepare_zdc_z(PHCompositeNode *topNode);
 
     private:
 
@@ -139,6 +144,7 @@ class ForwardCaloNtuplizer : public SubsysReco
         long long scaled_trigger_decimal;
 
         double mbd_z_vtx;
+        double zdc_z_vtx;
 
         std::vector<int> trigger_input_vec;
         std::vector<int> live_trigger_vec;

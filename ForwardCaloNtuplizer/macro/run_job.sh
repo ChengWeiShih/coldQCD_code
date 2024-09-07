@@ -16,6 +16,7 @@ export ROOT_INCLUDE_PATH=$MYINSTALL/include:$ROOT_INCLUDE_PATH
 
 source /opt/sphenix/core/bin/setup_local.sh $MYINSTALL
 
+export ROOT_INCLUDE_PATH=/sphenix/user/ChengWei/sPH_macros/common:$ROOT_INCLUDE_PATH
 echo $ROOT_INCLUDE_PATH | sed -e "s/:/\n/g"
 
 # print the environment - needed for debugging

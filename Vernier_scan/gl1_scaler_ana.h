@@ -37,27 +37,33 @@ class gl1_scaler_ana
             vector<pair<int,int>> range_t_H_in,
             bool NCollision_corr_in, 
             bool beam_intensity_corr_in,
-            bool accidental_correction_in
+            bool accidental_correction_in,
+            bool use_set_pos_in = false,
+            bool MBD_zvtx_effi_in = false
         );
         void PrepareRate(string input_file_directory = "null");
         void OutputRawRate(string output_file_directory);
         void SetDetectorName(string detector_name);
-        void SetDemoFactor(double demo_factor_in) {demo_factor = demo_factor_in;}
+        void SetDemoFactor(pair<double,double> demo_factor_in) {demo_factor = demo_factor_in;}
         void ImportCADReadings(string cad_reading_directory, bool SD_column = false);
         std::pair<TGraphErrors *, TGraphErrors *> CombineMacro(string detector_name, bool only_raw_rate_tag_in = false);
         void SetNcollision_corr(bool NCollision_corr_in) {NCollision_corr = NCollision_corr_in;}
         void SetBeamIntensity_corr(bool beam_intensity_corr_in) {beam_intensity_corr = beam_intensity_corr_in;}
+        void SetMBDvtxZEffiFunc(TF1* MBD_vtxZ_effi_func_in) {MBD_vtxZ_effi_func = MBD_vtxZ_effi_func_in;};
         void PrepareData();
-        void CombineData(); // note : combine BPM and MBD rate
-        void DrawPlots();
-        void ClearUp();
+        void CombineData(); // note : combine BPM and detector rate
+        virtual void DrawPlots();
+        void SaveHistROOT();
+        virtual void ClearUp();
         static void PrintInfo(string scan_direction_string, vector<pair<string, TGraphErrors *>> vector_in, int column_size = 10);
         void GetMachineLumi();
         void GetDetectorCrossSection();
+        void GetInformation();
 
     protected:
-        static double FindHighestEntry_grE(TGraphErrors * gr);
-        static double FindHighestEntry_gr(TGraph * gr);
+        // static double FindHighestEntry_grE(TGraphErrors * gr);
+        // static double FindHighestEntry_gr(TGraph * gr);
+        template <typename T> static pair<double, double> FindHighestEntry_gr(T * gr);
         static double tg_average(TGraph * input_tgraph);
         static double tg_stddev(TGraph * input_tgraph);
 
@@ -75,7 +81,17 @@ class gl1_scaler_ana
             vector<pair<double,double>> &outlier_rejection_factor_vec_All,
             vector<double> &multi_collision_correction_All,
             vector<TF1 *> &fit_gaus_vec_All,
-            vector<double> &accidental_correction_All
+            vector<double> &accidental_correction_All,
+            vector<TH1F *> &h1D_detectorNS_vertexZ_vecAll,
+            vector<TH1F *> &h1D_detectorNS_vertexZ_postCorr_vecAll,
+            vector<double> &detectorNS_zvtx_effi_correction_All
+        );
+
+        void PrepareMBDvtxZEffi(
+            string direction_string,
+            vector<TH1F *> &h1D_detectorNS_vertexZ_vecAll,
+            vector<TH1F *> &h1D_detectorNS_vertexZ_postCorr_vecAll,
+            vector<double> &detectorNS_zvtx_effi_correction_All
         );
 
         // note : variables for the constructor
@@ -86,8 +102,12 @@ class gl1_scaler_ana
         bool NCollision_corr;
         bool beam_intensity_corr;
         bool accidental_correction;
+        bool use_set_pos;
+        bool MBD_zvtx_effi;
         string detector_selection;
 
+
+        TCanvas * c1;
         TFile * file_in;
         TTree * tree;
         long long evtID;
@@ -96,7 +116,7 @@ class gl1_scaler_ana
         long long GTMBusyVector_Decimal;
         vector<int> *live_trigger_vec;
         map<int, int> live_trigger_map;
-        
+        double mbd_z_vtx;
 
         long long GL1Scalers_clock_raw; // note : 0
         long long GL1Scalers_clock_live;
@@ -124,7 +144,7 @@ class gl1_scaler_ana
         long long GL1Scalers_MBDNS_scaled;
 
         
-
+        TF1 * MBD_vtxZ_effi_func = nullptr;
 
         bool pre_good_evt;
         bool this_good_evt;
@@ -148,6 +168,7 @@ class gl1_scaler_ana
         map<int, vector<long long>> time_MBDN_raw_counting;
         map<int, vector<long long>> time_MBDNS_raw_counting; // note : the MBDNS counting in every second, the second is given by the GL1 clock
         map<int, pair<int, int>>    time_MBDNS_30cm_raw_counting_pair;
+        map<int, vector<double>>    time_MBDNS_zvtx; // note : this one keeps the MBDNS zvtx readings in every second, every second has one vector
         
         map<int, pair<long long, long long>> time_GL1Scalers_range; // note : the range of every second
 
@@ -163,6 +184,10 @@ class gl1_scaler_ana
         // note : maybe mainly for MBD
         vector<double> multi_collision_correction_V;
         vector<double> multi_collision_correction_H;
+        
+        // note : maybe mainly for the MBD vertex Z effi.
+        vector<double> detectorNS_zvtx_effi_correction_V;
+        vector<double> detectorNS_zvtx_effi_correction_H;
 
         // note : maybe mainly for ZDC
         vector<double> accidental_correction_V;
@@ -184,7 +209,6 @@ class gl1_scaler_ana
         vector<double> DetectorNS_rate_avg_vecH;
         vector<double> DetectorNS_rate_avg_vecH_error;
 
-        TCanvas * c1;
         TGraph * gr_raw_ZDCS_rate;
         TGraph * gr_raw_ZDCN_rate;
         TGraph * gr_raw_ZDCNS_rate;
@@ -199,6 +223,10 @@ class gl1_scaler_ana
         vector<TGraphErrors *> gr_raw_detectorNS_rate_vecH;
         vector<TGraph *> gr_raw_detectorNS_rate_vecV_wide;
         vector<TGraph *> gr_raw_detectorNS_rate_vecH_wide;
+        vector<TH1F *> h1D_detectorNS_vertexZ_vecV;
+        vector<TH1F *> h1D_detectorNS_vertexZ_vecH;
+        vector<TH1F *> h1D_detectorNS_vertexZ_postCorr_vecV;
+        vector<TH1F *> h1D_detectorNS_vertexZ_postCorr_vecH;
         double search_window = 5; // note : this is for the weird second rejection
         double outlier_rejection_factor = 2; // note : this is for the weird second rejection
         vector<pair<double, double>> outlier_rejection_factor_vecV;
@@ -211,7 +239,7 @@ class gl1_scaler_ana
         TLegend * legend;
         TLine * coord_line;
 
-        double demo_factor;
+        pair<double,double> demo_factor;
         TGraphErrors * gr_BPM_raw_detectorNS_rate_V;
         TGraphErrors * gr_BPM_raw_detectorNS_rate_V_demo;
         TGraphErrors * gr_BPM_raw_detectorNS_rate_H;
@@ -222,12 +250,22 @@ class gl1_scaler_ana
         bool only_raw_rate_tag;
 
         string detector_pool[6] = {"ZDCS", "ZDCN", "ZDCNS", "MBDS", "MBDN", "MBDNS"};
+        vector<double> BPM_set_pos_V = { // note : according to the second vernier scan, the run 51195
+            0.0, 0.1, 0.25, 0.4, 0.6, 0.9,
+            0.0, -0.1, -0.25, -0.4, -0.6, -0.9
+        };
+        vector<double> BPM_set_pos_H = { // note : according to the second vernier scan, the run 51195
+            0.0, 0.1, 0.25, 0.4, 0.6, 0.9,
+            0.0, -0.1, -0.25, -0.4, -0.6, -0.9
+        };
+        double nominal_width = 0.26; // note : unit : mm
 
         bool BPM_StdDev;
 
         // note : for calculate the machine luminosity, and the detector cross section
         double um2_to_mb = 1.0e-19;
         double fbeam = 78.4 * 1000; // note : 78 kHz
+        double Rmax_avg_single_bunch;
         double machine_lumi;
         double detector_cross_section;
         double DCCT_B; // note : the average beam intensity of the BLUE beam
@@ -238,10 +276,10 @@ class gl1_scaler_ana
     private:
         static double gaus_func(double *x, double *par)
         {
-            // note : par[0] : size                                                                                                                           
-            // note : par[1] : mean                                                                                                                           
-            // note : par[2] : width                                                                                                                          
-            // note : par[3] : offset                                                                                                                         
+            // note : par[0] : size
+            // note : par[1] : mean
+            // note : par[2] : width
+            // note : par[3] : offset
             return par[0] * TMath::Gaus(x[0],par[1],par[2]) + par[3];
         }
 

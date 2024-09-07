@@ -71,6 +71,7 @@ def main():
         input_filenameY = "sPhenix.WcmDcctBpm.y.34785.csv"
         steer_beam = "Y" # note : yello beam    
         beam_color = "#FFAE42"
+        DX_SD_tag = False
     elif (args.sPHrun == 51195):
         input_directory = "/sphenix/tg/tg01/coldqcd/cwshih/test/run_51195/CAD_reading"
         input_filenameX = "sPhenix.WcmDcctBpm.x.34949.dat"
@@ -90,6 +91,8 @@ def main():
 
     df_X['Average_H'] = (df_X['Dx%s7H'%steer_beam] + df_X['Dx%s8H'%steer_beam]) / 2
     df_Y['Average_V'] = (df_Y['Dx%s7V'%steer_beam] + df_Y['Dx%s8V'%steer_beam]) / 2
+    df_X['Average_H_diff'] = df_X['Average_H'].diff()
+    df_Y['Average_V_diff'] = df_Y['Average_V'].diff()
 
     if (DX_SD_tag):
         df_X['StdDev_H'] = np.sqrt( np.power(df_X['Dx%s7H_SD'%steer_beam], 2) + np.power(df_X['Dx%s8H_SD'%steer_beam], 2) ) / 2.
@@ -123,7 +126,7 @@ def main():
     df_X['DCCT_BY'] = df_X['DCCT_B'] * df_X['DCCT_Y']
     df_X['DCCT_correction'] = 1./ (df_X['DCCT_B_ratio'] * df_X['DCCT_Y_ratio'])
     df_X['DCCT_post_corr'] = df_X['DCCT_BY'] * df_X['DCCT_correction']
-    df_X = df_X.drop(df_X.index[-1])
+    df_X = df_X.drop(df_X.index[-1]) # note : drop the last row since we don't use it in the scan analysis 
     
     # note : Y scan
     df_Y['relative_Time'] = df_Y['Time'] - global_time_ref
@@ -132,7 +135,7 @@ def main():
     df_Y['DCCT_BY'] = df_Y['DCCT_B'] * df_Y['DCCT_Y']
     df_Y['DCCT_correction'] = 1./ (df_Y['DCCT_B_ratio'] * df_Y['DCCT_Y_ratio'])
     df_Y['DCCT_post_corr'] = df_Y['DCCT_BY'] * df_Y['DCCT_correction']
-    df_Y = df_Y.drop(df_Y.index[-1])
+    df_Y = df_Y.drop(df_Y.index[-1]) # note : drop the last row since we don't use it in the scan analysis 
 
 
     if (df_Y['Time'].iloc[0] < df_X['Time'].iloc[0]):
@@ -170,8 +173,8 @@ def main():
     print("the average and stddev of WcmY : %.4f, %.4f"%(df_YX['WcmY'].mean(), df_YX['WcmY'].std()))
 
     if (args.genCSV):
-        sub_df_X = df_X[['Average_H','DCCT_correction']]
-        sub_df_Y = df_Y[['Average_V','DCCT_correction']]
+        sub_df_X = df_X[['Average_H','DCCT_correction_H']]
+        sub_df_Y = df_Y[['Average_V','DCCT_correction_V']]
 
         DCCT_number_df = pd.DataFrame({
             'DCCT_B_avg': [df_YX['DCCT_B'].mean()] * len(sub_df_X), 

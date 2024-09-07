@@ -4,6 +4,13 @@
 #include <forwardcalontuplizer/ForwardCaloNtuplizer.h>
 
 #include <G4_Input.C>
+#include <Calo_Calib.C>
+
+#include <caloreco/CaloTowerBuilder.h>
+
+#include <caloreco/CaloTowerCalib.h>
+#include <caloreco/CaloTowerStatus.h>
+#include <zdcinfo/ZdcReco.h>
 
 #include <fun4allraw/Fun4AllPrdfInputManager.h>
 #include <fun4all/Fun4AllDstInputManager.h>
@@ -30,6 +37,9 @@ R__LOAD_LIBRARY(libfun4allraw.so)
 R__LOAD_LIBRARY(libForwardCaloNtuplizer.so)
 R__LOAD_LIBRARY(libmbd.so)
 
+R__LOAD_LIBRARY(libzdcinfo.so)
+R__LOAD_LIBRARY(libcalo_reco.so)
+
 void Fun4All_ForwardCalo(
     const int process = 0,
     const int nEvents = -1,
@@ -51,6 +61,8 @@ void Fun4All_ForwardCalo(
     in1->AddFile(input_filename);
     se->registerInputManager(in1);
 
+    cout<<11111<<endl;
+
     // cout<<"test, the runnumber from Fun4AllInputManager : "<<in1->RunNumber()<<endl;
 
     // INPUTREADHITS::filename[0] = input_filename;
@@ -61,28 +73,79 @@ void Fun4All_ForwardCalo(
 
     recoConsts *rc = recoConsts::instance();
 
+    cout<<22222<<endl;
+
     // const std::string& dbtag= "2024p007";
 
     rc->set_StringFlag("CDB_GLOBALTAG", dbtag);
     // rc->set_uint64Flag("TIMESTAMP", CDB::timestamp);
     CDBInterface::instance()->Verbosity(1);
 
+    cout<<33333<<endl;
 
     // MBD/BBC Reconstruction
     MbdReco *mbdreco = new MbdReco();
     se->registerSubsystem(mbdreco);
 
+    cout<<44444<<endl;
+
+    // note : ------------------ ------------------ ------------------ for the ZDC ------------------ ------------------ ------------------ 
+    CaloTowerDefs::BuilderType buildertype = CaloTowerDefs::kPRDFTowerv4;
+
+    cout<<55555<<endl;
+
+    CaloTowerBuilder *caZDC = new CaloTowerBuilder("ZDCBUILDER");
+    caZDC->set_detector_type(CaloTowerDefs::ZDC);
+    caZDC->set_builder_type(buildertype);
+    caZDC->set_processing_type(CaloWaveformProcessing::FAST);
+    caZDC->set_nsamples(16);
+    caZDC->set_offlineflag();
+    se->registerSubsystem(caZDC);
+
+    cout<<66666<<endl;
+
+    //ZDC Reconstruction--Calib Info
+    ZdcReco *zdcreco = new ZdcReco();
+    se->registerSubsystem(zdcreco);
+
+    cout<<77777<<endl;
+
+    /////////////////////////////////////////////////////
+    // Set status of towers, Calibrate towers,  Cluster
+    Process_Calo_Calib();
+
+    cout<<88888<<endl;
+
+    // note : ------------------ ------------------ ------------------ for the ZDC ------------------ ------------------ ------------------ 
+
+    // //ZDC Reconstruction--Calib Info
+    // ZdcReco *zdcreco = new ZdcReco();
+    // se->registerSubsystem(zdcreco);
+
+    // std::cout << "Calibrating ZDC" << std::endl;
+    // CaloTowerCalib *calibZDC = new CaloTowerCalib("ZDC");
+    // calibZDC->set_detector_type(CaloTowerDefs::ZDC);
+    // se->registerSubsystem(calibZDC);
+
     bool get_mbd_z = true;  
+    bool get_waveform = true;
+    bool get_zdc_z = true;
 
     ForwardCaloNtuplizer * forwardcalontuplizer = new ForwardCaloNtuplizer(
         "ForwardCaloNtuplizer",
         output_directory,
         outname,
-        get_mbd_z
+        get_waveform,
+        get_mbd_z,
+        get_zdc_z
     );
+
+    cout<<99999<<endl;
 
     se -> registerSubsystem(forwardcalontuplizer);
     
+    cout<<101010<<endl;
+
     //--------------
     // Set up Input Managers
     //--------------

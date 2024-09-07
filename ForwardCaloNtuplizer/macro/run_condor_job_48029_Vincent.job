@@ -6,13 +6,13 @@ concurrency_limits = CONCURRENCY_LIMIT_DEFAULT:100
 request_memory     = 4GB
 Priority           = 20
 job_lease_duration = 86400
-runnumber          = 51195
+runnumber          = 48029
 Nevent             = -1
-input_filename     = /sphenix/tg/tg01/commissioning/pinkenbu/vernier/DST_TRIGGERED_EVENT_run2pp_new_2024p003-00051195-$INT(process,%05d).root
-output_directory   = /sphenix/tg/tg01/coldqcd/cwshih/test/run_51195/from_Chris_mbdZ/ntuple_file_waveform_ZDCvtxZ
+input_filename     = /sphenix/tg/tg01/coldqcd/cwshih/test/test_run_48029/from_Vincent/newDST_TRIGGERED_EVENT_run2pp_new_2024VAndrieuxProd-00048029-$INT(process,%07d).root
+output_directory   = /sphenix/tg/tg01/coldqcd/cwshih/test/test_run_48029/from_Vincent/ntuple_file_waveform_ZDCvtxZ
 outputFile         = ntuple_run$(runnumber)_$INT(process,%05d).root
 Output             = $(output_directory)/CW_log/condor_$(process).out
 Error              = $(output_directory)/CW_log/condor_$(process).err
 Log                = $(output_directory)/CW_log/condor_$(process).log
 Arguments          = "$(process) $(Nevent) $(input_filename) $(output_directory) $(outputFile)"
-Queue 16
+Queue 29

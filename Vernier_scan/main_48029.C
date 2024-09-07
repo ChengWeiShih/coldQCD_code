@@ -50,8 +50,10 @@ int main_48029()
         output_directory,
         range_t_V,
         range_t_H,
-        false, true
+        false, true, false
     );
+    // MBDS_ana->PrepareRate();
+    // MBDS_ana->OutputRawRate((input_directory + "/" + output_data_filename).c_str());
     MBDS_ana->PrepareRate((input_directory + "/" + output_data_filename).c_str());
     MBDS_ana->ImportCADReadings(CAD_reading_filename.c_str());
     pair<TGraphErrors *, TGraphErrors *> MBDS_tgrE = MBDS_ana->CombineMacro("MBDS");
@@ -64,7 +66,7 @@ int main_48029()
         output_directory,
         range_t_V,
         range_t_H,
-        false, true
+        false, true, false
     );
     MBDN_ana->PrepareRate((input_directory + "/" + output_data_filename).c_str());
     MBDN_ana->ImportCADReadings(CAD_reading_filename.c_str());
@@ -72,17 +74,54 @@ int main_48029()
 
 
 
-    gl1_scaler_ana * MBDNS_ana = new gl1_scaler_ana(
+    gl1_scaler_ana * MBDNS_ana_fff = new gl1_scaler_ana(
         input_directory, 
         input_filename, 
         output_directory,
         range_t_V,
         range_t_H,
-        false, true
+        false, false, false
     );
-    MBDNS_ana->PrepareRate((input_directory + "/" + output_data_filename).c_str());
-    MBDNS_ana->ImportCADReadings(CAD_reading_filename.c_str());
-    pair<TGraphErrors *, TGraphErrors *> MBDNS_tgrE = MBDNS_ana->CombineMacro("MBDNS");
+    MBDNS_ana_fff->PrepareRate((input_directory + "/" + output_data_filename).c_str());
+    MBDNS_ana_fff->ImportCADReadings(CAD_reading_filename.c_str());
+    pair<TGraphErrors *, TGraphErrors *> MBDNS_tgrE_fff = MBDNS_ana_fff->CombineMacro("MBDNS");
+
+    gl1_scaler_ana * MBDNS_ana_ftf = new gl1_scaler_ana(
+        input_directory, 
+        input_filename, 
+        output_directory,
+        range_t_V,
+        range_t_H,
+        false, true, false
+    );
+    MBDNS_ana_ftf->PrepareRate((input_directory + "/" + output_data_filename).c_str());
+    MBDNS_ana_ftf->ImportCADReadings(CAD_reading_filename.c_str());
+    pair<TGraphErrors *, TGraphErrors *> MBDNS_tgrE_ftf = MBDNS_ana_ftf->CombineMacro("MBDNS");
+
+    gl1_scaler_ana * MBDNS_ana_ttf = new gl1_scaler_ana(
+        input_directory, 
+        input_filename, 
+        output_directory,
+        range_t_V,
+        range_t_H,
+        true, true, false
+    );
+    MBDNS_ana_ttf->PrepareRate((input_directory + "/" + output_data_filename).c_str());
+    MBDNS_ana_ttf->ImportCADReadings(CAD_reading_filename.c_str());
+    pair<TGraphErrors *, TGraphErrors *> MBDNS_tgrE_ttf = MBDNS_ana_ttf->CombineMacro("MBDNS");
+
+    gl1_scaler_ana * MBDNS_ana_ttft = new gl1_scaler_ana(
+        input_directory, 
+        input_filename, 
+        output_directory,
+        range_t_V,
+        range_t_H,
+        true, true, false, true
+    );
+    MBDNS_ana_ttft->PrepareRate((input_directory + "/" + output_data_filename).c_str());
+    MBDNS_ana_ttft->ImportCADReadings(CAD_reading_filename.c_str());
+    pair<TGraphErrors *, TGraphErrors *> MBDNS_tgrE_ttft = MBDNS_ana_ttft->CombineMacro("MBDNS");
+
 
 
 
@@ -93,7 +132,7 @@ int main_48029()
         output_directory,
         range_t_V,
         range_t_H,
-        false, true
+        false, true, false
     );
     ZDCS_ana->PrepareRate((input_directory + "/" + output_data_filename).c_str());
     ZDCS_ana->ImportCADReadings(CAD_reading_filename.c_str());
@@ -108,7 +147,7 @@ int main_48029()
         output_directory,
         range_t_V,
         range_t_H,
-        false, true
+        false, true, false
     );
     ZDCN_ana->PrepareRate((input_directory + "/" + output_data_filename).c_str());
     ZDCN_ana->ImportCADReadings(CAD_reading_filename.c_str());
@@ -117,45 +156,77 @@ int main_48029()
 
 
 
-    gl1_scaler_ana * ZDCNS_ana = new gl1_scaler_ana(
+    gl1_scaler_ana * ZDCNS_ana_fff = new gl1_scaler_ana(
         input_directory, 
         input_filename, 
         output_directory,
         range_t_V,
         range_t_H,
-        false, true
+        false, false, false
     );
-    ZDCNS_ana->PrepareRate((input_directory + "/" + output_data_filename).c_str());
-    ZDCNS_ana->ImportCADReadings(CAD_reading_filename.c_str());
-    pair<TGraphErrors *, TGraphErrors *> ZDCNS_tgrE = ZDCNS_ana->CombineMacro("ZDCNS");
+    ZDCNS_ana_fff->PrepareRate((input_directory + "/" + output_data_filename).c_str());
+    ZDCNS_ana_fff->ImportCADReadings(CAD_reading_filename.c_str());
+    pair<TGraphErrors *, TGraphErrors *> ZDCNS_tgrE_fff = ZDCNS_ana_fff->CombineMacro("ZDCNS");
+
+    gl1_scaler_ana * ZDCNS_ana_ftf = new gl1_scaler_ana(
+        input_directory, 
+        input_filename, 
+        output_directory,
+        range_t_V,
+        range_t_H,
+        false, true, false
+    );
+    ZDCNS_ana_ftf->PrepareRate((input_directory + "/" + output_data_filename).c_str());
+    ZDCNS_ana_ftf->ImportCADReadings(CAD_reading_filename.c_str());
+    pair<TGraphErrors *, TGraphErrors *> ZDCNS_tgrE_ftf = ZDCNS_ana_ftf->CombineMacro("ZDCNS");
+
+    gl1_scaler_ana * ZDCNS_ana_ftt = new gl1_scaler_ana(
+        input_directory, 
+        input_filename, 
+        output_directory,
+        range_t_V,
+        range_t_H,
+        false, true, true
+    );
+    ZDCNS_ana_ftt->PrepareRate((input_directory + "/" + output_data_filename).c_str());
+    ZDCNS_ana_ftt->ImportCADReadings(CAD_reading_filename.c_str());
+    pair<TGraphErrors *, TGraphErrors *> ZDCNS_tgrE_ftt = ZDCNS_ana_ftt->CombineMacro("ZDCNS");
+
+    gl1_scaler_ana * ZDCNS_ana_fttt = new gl1_scaler_ana(
+        input_directory, 
+        input_filename, 
+        output_directory,
+        range_t_V,
+        range_t_H,
+        false, true, true, true
+    );
+    ZDCNS_ana_fttt->PrepareRate((input_directory + "/" + output_data_filename).c_str());
+    ZDCNS_ana_fttt->ImportCADReadings(CAD_reading_filename.c_str());
+    pair<TGraphErrors *, TGraphErrors *> ZDCNS_tgrE_fttt = ZDCNS_ana_fttt->CombineMacro("ZDCNS");
 
 
-    gl1_scaler_ana::PrintInfo(
-        "Vertical", 
-        {
-            {"MBDS", MBDS_tgrE.first},
-            {"MBDN", MBDN_tgrE.first},
-            {"MBDNS", MBDNS_tgrE.first}
-        },
-        15
-    );
-
-    gl1_scaler_ana::PrintInfo(
-        "Horizontal", 
-        {
-            {"MBDS", MBDS_tgrE.second},
-            {"MBDN", MBDN_tgrE.second},
-            {"MBDNS", MBDNS_tgrE.second}
-        },
-        15
-    );
+    MBDS_ana -> GetInformation();
+    MBDN_ana -> GetInformation();
+    MBDNS_ana_fff -> GetInformation();
+    MBDNS_ana_ftf -> GetInformation();
+    MBDNS_ana_ttf -> GetInformation();
+    MBDNS_ana_ttft -> GetInformation();
+    ZDCS_ana -> GetInformation();
+    ZDCN_ana -> GetInformation();
+    ZDCNS_ana_fff -> GetInformation();
+    ZDCNS_ana_ftf -> GetInformation();
+    ZDCNS_ana_ftt -> GetInformation();
+    ZDCNS_ana_fttt -> GetInformation();
 
     gl1_scaler_ana::PrintInfo(
         "Vertical", 
         {
             {"ZDCS", ZDCS_tgrE.first},
             {"ZDCN", ZDCN_tgrE.first},
-            {"ZDCNS", ZDCNS_tgrE.first}
+            {"ZDCNS_ffff", ZDCNS_tgrE_fff.first},
+            {"ZDCNS_ftff", ZDCNS_tgrE_ftf.first},
+            {"ZDCNS_fttf", ZDCNS_tgrE_ftt.first},
+            {"ZDCNS_fttt", ZDCNS_tgrE_fttt.first}
         },
         15
     );
@@ -165,10 +236,53 @@ int main_48029()
         {
             {"ZDCS", ZDCS_tgrE.second},
             {"ZDCN", ZDCN_tgrE.second},
-            {"ZDCNS", ZDCNS_tgrE.second}
+            {"ZDCNS_ffff", ZDCNS_tgrE_fff.second},
+            {"ZDCNS_ftff", ZDCNS_tgrE_ftf.second},
+            {"ZDCNS_fttf", ZDCNS_tgrE_ftt.second},
+            {"ZDCNS_fttt", ZDCNS_tgrE_fttt.second}
         },
         15
     );
+
+    // gl1_scaler_ana::PrintInfo(
+    //     "Vertical", 
+    //     {
+    //         {"MBDS", MBDS_tgrE.first},
+    //         {"MBDN", MBDN_tgrE.first},
+    //         {"MBDNS", MBDNS_tgrE.first}
+    //     },
+    //     15
+    // );
+
+    // gl1_scaler_ana::PrintInfo(
+    //     "Horizontal", 
+    //     {
+    //         {"MBDS", MBDS_tgrE.second},
+    //         {"MBDN", MBDN_tgrE.second},
+    //         {"MBDNS", MBDNS_tgrE.second}
+    //     },
+    //     15
+    // );
+
+    // gl1_scaler_ana::PrintInfo(
+    //     "Vertical", 
+    //     {
+    //         {"ZDCS", ZDCS_tgrE.first},
+    //         {"ZDCN", ZDCN_tgrE.first},
+    //         {"ZDCNS", ZDCNS_tgrE.first}
+    //     },
+    //     15
+    // );
+
+    // gl1_scaler_ana::PrintInfo(
+    //     "Horizontal", 
+    //     {
+    //         {"ZDCS", ZDCS_tgrE.second},
+    //         {"ZDCN", ZDCN_tgrE.second},
+    //         {"ZDCNS", ZDCNS_tgrE.second}
+    //     },
+    //     15
+    // );
 
 
 

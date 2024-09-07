@@ -325,6 +325,10 @@ ForwardCaloNtuplizer.lo: ForwardCaloNtuplizer.cc \
  /cvmfs/sphenix.sdcc.bnl.gov/gcc-12.1.0/release/release_ana/ana.427/include/calobase/TowerInfoDefs.h \
  /cvmfs/sphenix.sdcc.bnl.gov/gcc-12.1.0/release/release_ana/ana.427/include/calobase/RawTowerDefs.h \
  /cvmfs/sphenix.sdcc.bnl.gov/gcc-12.1.0/opt/sphenix/core/gcc/12.1.0-57c96/x86_64-centos7/include/c++/12.1.0/bitset \
+ /cvmfs/sphenix.sdcc.bnl.gov/gcc-12.1.0/release/release_ana/ana.427/include/calobase/TowerInfoContainer.h \
+ /cvmfs/sphenix.sdcc.bnl.gov/gcc-12.1.0/release/release_ana/ana.427/include/calobase/TowerInfo.h \
+ /cvmfs/sphenix.sdcc.bnl.gov/gcc-12.1.0/release/release_ana/ana.427/include/calobase/TowerInfov2.h \
+ /cvmfs/sphenix.sdcc.bnl.gov/gcc-12.1.0/release/release_ana/ana.427/include/calobase/TowerInfov1.h \
  /cvmfs/sphenix.sdcc.bnl.gov/gcc-12.1.0/release/release_ana/ana.427/include/caloreco/CaloWaveformFitting.h \
  /cvmfs/sphenix.sdcc.bnl.gov/gcc-12.1.0/release/release_ana/ana.427/include/ffarawobjects/CaloPacketContainerv1.h \
  /cvmfs/sphenix.sdcc.bnl.gov/gcc-12.1.0/release/release_ana/ana.427/include/ffarawobjects/CaloPacketContainer.h \
@@ -729,6 +733,10 @@ ForwardCaloNtuplizer.h:
 /cvmfs/sphenix.sdcc.bnl.gov/gcc-12.1.0/release/release_ana/ana.427/include/calobase/TowerInfoDefs.h:
 /cvmfs/sphenix.sdcc.bnl.gov/gcc-12.1.0/release/release_ana/ana.427/include/calobase/RawTowerDefs.h:
 /cvmfs/sphenix.sdcc.bnl.gov/gcc-12.1.0/opt/sphenix/core/gcc/12.1.0-57c96/x86_64-centos7/include/c++/12.1.0/bitset:
+/cvmfs/sphenix.sdcc.bnl.gov/gcc-12.1.0/release/release_ana/ana.427/include/calobase/TowerInfoContainer.h:
+/cvmfs/sphenix.sdcc.bnl.gov/gcc-12.1.0/release/release_ana/ana.427/include/calobase/TowerInfo.h:
+/cvmfs/sphenix.sdcc.bnl.gov/gcc-12.1.0/release/release_ana/ana.427/include/calobase/TowerInfov2.h:
+/cvmfs/sphenix.sdcc.bnl.gov/gcc-12.1.0/release/release_ana/ana.427/include/calobase/TowerInfov1.h:
 /cvmfs/sphenix.sdcc.bnl.gov/gcc-12.1.0/release/release_ana/ana.427/include/caloreco/CaloWaveformFitting.h:
 /cvmfs/sphenix.sdcc.bnl.gov/gcc-12.1.0/release/release_ana/ana.427/include/ffarawobjects/CaloPacketContainerv1.h:
 /cvmfs/sphenix.sdcc.bnl.gov/gcc-12.1.0/release/release_ana/ana.427/include/ffarawobjects/CaloPacketContainer.h:

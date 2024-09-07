@@ -64,6 +64,8 @@
 #include "ForwardCaloNtuplizer.h"
 
 #include <calobase/TowerInfoDefs.h>
+#include <calobase/TowerInfoContainer.h>
+#include <calobase/TowerInfov2.h>
 #include <caloreco/CaloWaveformFitting.h>
 
 #include <calobase/TowerInfoDefs.h>
@@ -91,12 +93,13 @@
 R__LOAD_LIBRARY (libuspin.so)
 
 //____________________________________________________________________________..
-ForwardCaloNtuplizer::ForwardCaloNtuplizer(const std::string &name, const std::string output_directory_in, const std::string file_out_name_in, const bool &with_waveform_in, const bool &get_mbd_z_in)
+ForwardCaloNtuplizer::ForwardCaloNtuplizer(const std::string &name, const std::string output_directory_in, const std::string file_out_name_in, const bool &with_waveform_in, const bool &get_mbd_z_in, const bool &get_zdc_z_in)
 :SubsysReco(name), 
 output_directory(output_directory_in),
 file_out_name(file_out_name_in),
 with_waveform(with_waveform_in),
 get_mbd_z(get_mbd_z_in),
+get_zdc_z(get_zdc_z_in),
 evtID(0)
 { 
     std::cout << "ForwardCaloNtuplizer::ForwardCaloNtuplizer(const std::string &name) Calling ctor" << std::endl; 
@@ -223,6 +226,7 @@ int ForwardCaloNtuplizer::Init(PHCompositeNode *topNode)
     tree_out -> Branch("evtBCO_zdc", &evtBCO_zdc);
     tree_out -> Branch("bunchnumber", &bunchnumber);
     tree_out -> Branch("mbd_z_vtx", &mbd_z_vtx);
+    tree_out -> Branch("zdc_z_vtx", &zdc_z_vtx);
     
 
     tree_out -> Branch("GTMBusyVector_Decimal", &GTMBusyVector_Decimal);
@@ -326,7 +330,7 @@ int ForwardCaloNtuplizer::process_event(PHCompositeNode *topNode)
     }
 
     p_gl1 = findNode::getClass<Gl1Packetv2>(topNode, /*"GL1RAWHIT"*/ /**/ "GL1Packet"); // note : for the selfgen DST, it may be the "GL1RAWHIT"
-    // zdc_cont = findNode::getClass<CaloPacketContainerv1>(topNode, "ZDCPackets");
+    zdc_cont = findNode::getClass<CaloPacketContainerv1>(topNode, "ZDCPackets");
 
     bunchnumber = -999;
     evtBCO_gl1 = -999;
@@ -337,6 +341,7 @@ int ForwardCaloNtuplizer::process_event(PHCompositeNode *topNode)
     live_trigger_decimal = -999;
     scaled_trigger_decimal = -999;
     mbd_z_vtx = -999;
+    zdc_z_vtx = -999;
 
     for (auto &GL1pair : GL1Scalers_map)
     {
@@ -358,6 +363,8 @@ int ForwardCaloNtuplizer::process_event(PHCompositeNode *topNode)
         trigger_input_vec = ForwardCaloNtuplizer::prepare_trigger_vec(trigger_input_decimal);
         live_trigger_vec = ForwardCaloNtuplizer::prepare_trigger_vec(live_trigger_decimal);
         scaled_trigger_vec = ForwardCaloNtuplizer::prepare_trigger_vec(scaled_trigger_decimal);
+
+        bunchnumber_1D -> Fill(bunchnumber);
 
         if (get_mbd_z){
             prepare_mbd_z(topNode);
@@ -445,6 +452,68 @@ int ForwardCaloNtuplizer::process_event(PHCompositeNode *topNode)
         //     evtID += 1;
         //     return Fun4AllReturnCodes::EVENT_OK;
         // }
+
+        // note : for the vertex Z reconstructed by ZDC
+        // note : also the waveforms from ZDC/SMD/VETO
+        if (zdc_cont->get_npackets() == 1)
+        {
+           CaloPacket *p_zdc = zdc_cont->getPacket(0);
+           if (p_zdc)
+           {
+                evtBCO_zdc = p_zdc->getBCO();
+
+                for (int c = 0; c < p_zdc->iValue(0, "CHANNELS"); c++)
+                {
+                    if (with_waveform == true && FC_unit_map.find(c) != FC_unit_map.end())
+                    {
+                        double baseline_left = 0.;
+                        double baseline_right = 0.;
+
+                        for (int s = 0; s < 3; s++) { baseline_left += p_zdc->iValue(s, c); }
+                        for (int s = p_zdc->iValue(0, "SAMPLES")-3; s < p_zdc->iValue(0, "SAMPLES"); s++) { baseline_right += p_zdc->iValue(s,c); }
+
+                        baseline_left /= 3.;
+                        baseline_right /=3.;
+                        // double baseline = (baseline_left < baseline_right) ? baseline_left : baseline_right;
+                        double baseline = 0;
+
+                        for (int s = 0; s < p_zdc->iValue(0, "SAMPLES"); s++)
+                        {
+                            double single_sample_adc = p_zdc->iValue(s, c) - baseline;
+
+                            FC_unit_map[c].waveform.push_back(single_sample_adc);
+                            FC_unit_waveform2D_map[c] -> Fill(s, single_sample_adc);
+                            // std::cout<< c <<" "<< p_zdc->iValue(s, c) << std::endl;
+                        }
+                        
+                        // std::cout<<p_zdc->iValue(0, "SAMPLES")<<std::endl;
+                    }
+                    // std::cout<<std::endl;
+                    
+                    if (FC_unit_map.find(c) != FC_unit_map.end())
+                    {
+                        std::vector<float> resultFast = anaWaveformFast(p_zdc, c);  // note: fast waveform fitting
+                        float signalFast = resultFast.at(0);
+                        float timingFast = resultFast.at(1);
+                        // float pedFast = resultFast.at(2);
+
+                        if (FC_unit_map[c].sig_T_window.first < timingFast && timingFast < FC_unit_map[c].sig_T_window.second)
+                        {
+                            FC_unit_map[c].adc = signalFast;
+                        }
+                    }
+                }
+
+                if (get_zdc_z){
+                    prepare_zdc_z(topNode);
+                    if (evtID % 10000 == 0)
+                    {
+                        std::cout<<"reco. ZDC vertex Z : "<<zdc_z_vtx<<" cm "<<std::endl;
+                    }
+                }
+                
+           } 
+        }
 
         // CaloPacket *p_zdc = zdc_cont->getPacket(0);
 
@@ -567,13 +636,64 @@ void ForwardCaloNtuplizer::prepare_mbd_z(PHCompositeNode *topNode)
         exit(1);
     }
 
-    std::cout << "MbdVertexMap size: " << m_mbdvtxmap->size() << std::endl;
+    // std::cout << "MbdVertexMap size: " << m_mbdvtxmap->size() << std::endl;
     for (MbdVertexMap::ConstIter biter = m_mbdvtxmap->begin(); biter != m_mbdvtxmap->end(); ++biter)
     {
         m_mbdvtx = biter->second;
         mbd_z_vtx = m_mbdvtx->get_z();
     }
 
+}
+
+void ForwardCaloNtuplizer::prepare_zdc_z(PHCompositeNode *topNode)
+{
+    towers_ZDC = findNode::getClass<TowerInfoContainer>(topNode, "TOWERINFO_CALIB_ZDC"); 
+
+    double _zdc_E[6] = {-999,-999,-999,-999,-999,-999};
+    double _zdc_t[6] = {-999,-999,-999,-999,-999,-999};
+
+    for (long unsigned int ch = 0; ch < 16 ; ch++)
+    {                       
+        TowerInfov2 *tower = (TowerInfov2*) towers_ZDC->get_tower_at_channel( ch );                                            
+
+        if (ch == 0) {               
+            _zdc_E[0] = tower->get_energy();     
+            _zdc_t[0] = tower->get_time_float();   
+        }                      
+        if (ch == 2) {               
+            _zdc_E[1] = tower->get_energy();     
+            _zdc_t[1] = tower->get_time_float();   
+        }                      
+        if (ch == 4) {               
+            _zdc_E[2] = tower->get_energy();     
+            _zdc_t[2] = tower->get_time_float();   
+        }                      
+        if (ch == 8) {               
+            _zdc_E[3] = tower->get_energy();     
+            _zdc_t[3] = tower->get_time_float();   
+        }                      
+        if (ch == 10) {               
+            _zdc_E[4] = tower->get_energy();     
+            _zdc_t[4] = tower->get_time_float();   
+        }                      
+        if (ch == 12) {               
+            _zdc_E[5] = tower->get_energy();     
+            _zdc_t[5] = tower->get_time_float();   
+        }                                 
+    }
+
+    float E_S = _zdc_E[0] + _zdc_E[1] + _zdc_E[2];
+    float E_S_t = _zdc_E[0] * _zdc_t[0] + _zdc_E[1] * _zdc_t[1] + _zdc_E[2] * _zdc_t[2];
+    float t_S = E_S_t / E_S;
+    float E_N = _zdc_E[3] + _zdc_E[4] + _zdc_E[5];
+    float E_N_t = _zdc_E[3] * _zdc_t[3] + _zdc_E[4] * _zdc_t[4] + _zdc_E[5] * _zdc_t[5];
+    float t_N = E_N_t / E_N;
+    //        cm/s           s                                                       
+    float TSAMPLE = 1.0 / ( 9.4e+6 * 6 );
+    float z_ZDC = 3e+10 * ( t_S - t_N ) * TSAMPLE / 2.0;
+
+    zdc_z_vtx = z_ZDC;
+    // std::cout<<"test, in ForwardCaloNtuplizer::prepare_zdc_z, zdc_z_vtx : "<<zdc_z_vtx<<std::endl;
 }
 
 //____________________________________________________________________________..

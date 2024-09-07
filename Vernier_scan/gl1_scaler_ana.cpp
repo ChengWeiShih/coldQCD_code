@@ -8,7 +8,9 @@ gl1_scaler_ana::gl1_scaler_ana(
     vector<pair<int,int>> range_t_H_in, 
     bool NCollision_corr_in, 
     bool beam_intensity_corr_in,
-    bool accidental_correction_in
+    bool accidental_correction_in,
+    bool use_set_pos_in,
+    bool MBD_zvtx_effi_in
 )
 : 
 input_directory(input_directory_in), 
@@ -16,14 +18,21 @@ input_filename(input_filename_in),
 output_directory(output_directory_in), 
 range_t_V(range_t_V_in),
 range_t_H(range_t_H_in),
-demo_factor(80.), 
+demo_factor({40., 80.}), 
 NCollision_corr(NCollision_corr_in),
 beam_intensity_corr(beam_intensity_corr_in),
 accidental_correction(accidental_correction_in),
 detector_selection("MBDNS"),
 global_ana_counting(0),
-BPM_StdDev(false)
+BPM_StdDev(false),
+use_set_pos(use_set_pos_in),
+MBD_zvtx_effi(MBD_zvtx_effi_in)
 {
+    cout<<"============================================================================================================"<<endl;
+    cout<<"============================================================================================================"<<endl;
+    cout<<"_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~_~"<<endl;
+    cout<<"============================================================================================================"<<endl;
+
     live_trigger_vec = 0;
 
     file_in = TFile::Open((input_directory + "/" + input_filename).c_str());
@@ -55,12 +64,14 @@ BPM_StdDev(false)
     tree->SetBranchStatus("GL1Scalers_MBDNS_raw", 1);
     tree->SetBranchStatus("GL1Scalers_MBDNS_live", 1);
     tree->SetBranchStatus("GL1Scalers_MBDNS_scaled", 1);
+    tree->SetBranchStatus("mbd_z_vtx",  1);
 
     tree->SetBranchAddress("evtID", &evtID);
     tree->SetBranchAddress("evtBCO_gl1", &evtBCO_gl1);
     tree->SetBranchAddress("bunchnumber", &bunchnumber);
     tree->SetBranchAddress("GTMBusyVector_Decimal", &GTMBusyVector_Decimal);
     tree->SetBranchAddress("LiveTrigger_Vec", &live_trigger_vec);
+    tree->SetBranchAddress("mbd_z_vtx", &mbd_z_vtx);
 
     tree->SetBranchAddress("GL1Scalers_clock_raw", &GL1Scalers_clock_raw);
     tree->SetBranchAddress("GL1Scalers_clock_live", &GL1Scalers_clock_live);
@@ -98,12 +109,14 @@ BPM_StdDev(false)
     time_MBDN_raw_counting.clear();
     time_MBDNS_raw_counting.clear();
     time_MBDNS_30cm_raw_counting_pair.clear();
+    time_MBDNS_zvtx.clear();
     time_detectorNS_raw_counting.clear();
     time_GL1Scalers_range.clear();
     step_selected_T_range_V.clear();
     step_counting_range_V.clear();
     step_selected_T_range_H.clear();
     step_counting_range_H.clear();
+    
 
 
     SetsPhenixStyle();
@@ -141,6 +154,11 @@ BPM_StdDev(false)
     fit_vecV.clear();
     fit_vecH.clear();
 
+    h1D_detectorNS_vertexZ_vecV.clear();
+    h1D_detectorNS_vertexZ_vecH.clear();
+
+    h1D_detectorNS_vertexZ_postCorr_vecV.clear();
+    h1D_detectorNS_vertexZ_postCorr_vecH.clear();
 
 
     for (int i = 0; i < range_t_V.size(); i++)
@@ -166,6 +184,18 @@ BPM_StdDev(false)
         fit_vecV.back() -> SetLineColor(4);
         fit_vecV.back() -> SetLineWidth(3); 
         fit_vecV.back() -> SetLineStyle(7);
+
+        h1D_detectorNS_vertexZ_vecV.push_back(new TH1F("", ";Reco. Z vertex [cm]; Entry", 100, -300, 300));
+        h1D_detectorNS_vertexZ_vecV.back() -> GetXaxis() -> SetNdivisions(505);
+
+        h1D_detectorNS_vertexZ_postCorr_vecV.push_back(new TH1F(
+            "",
+            Form("%s;%s;%s", h1D_detectorNS_vertexZ_vecV.back()->GetTitle(), h1D_detectorNS_vertexZ_vecV.back()->GetXaxis()->GetTitle(), h1D_detectorNS_vertexZ_vecV.back()->GetYaxis()->GetTitle()),
+            h1D_detectorNS_vertexZ_vecV.back()->GetNbinsX(),
+            h1D_detectorNS_vertexZ_vecV.back()->GetXaxis()->GetXmin(),
+            h1D_detectorNS_vertexZ_vecV.back()->GetXaxis()->GetXmax()
+        ));
+        h1D_detectorNS_vertexZ_postCorr_vecV.back() -> GetXaxis() -> SetNdivisions(505);
     }
 
     for (int i = 0; i < range_t_H.size(); i++)
@@ -191,6 +221,18 @@ BPM_StdDev(false)
         fit_vecH.back() -> SetLineColor(4);
         fit_vecH.back() -> SetLineWidth(3);
         fit_vecH.back() -> SetLineStyle(7);
+
+        h1D_detectorNS_vertexZ_vecH.push_back(new TH1F("", ";Reco. Z vertex [cm]; Entry", 100, -300, 300));
+        h1D_detectorNS_vertexZ_vecH.back() -> GetXaxis() -> SetNdivisions(505);
+
+        h1D_detectorNS_vertexZ_postCorr_vecH.push_back(new TH1F(
+            "",
+            Form("%s;%s;%s", h1D_detectorNS_vertexZ_vecH.back()->GetTitle(), h1D_detectorNS_vertexZ_vecH.back()->GetXaxis()->GetTitle(), h1D_detectorNS_vertexZ_vecH.back()->GetYaxis()->GetTitle()),
+            h1D_detectorNS_vertexZ_vecH.back()->GetNbinsX(),
+            h1D_detectorNS_vertexZ_vecH.back()->GetXaxis()->GetXmin(),
+            h1D_detectorNS_vertexZ_vecH.back()->GetXaxis()->GetXmax()
+        ));
+        h1D_detectorNS_vertexZ_postCorr_vecH.back() -> GetXaxis() -> SetNdivisions(505);
     }
 
     draw_text = new TLatex();
@@ -256,7 +298,11 @@ BPM_StdDev(false)
     outlier_rejection_factor_vecH.clear();
     accidental_correction_V.clear();
     accidental_correction_H.clear();
+    detectorNS_zvtx_effi_correction_H.clear();
+    detectorNS_zvtx_effi_correction_V.clear();
 }
+
+// TCanvas * gl1_scaler_ana::c1 = new TCanvas("c1", "c1", 950, 800);
 
 void gl1_scaler_ana::SetDetectorName(string detector_name) {
     if (
@@ -322,6 +368,17 @@ void gl1_scaler_ana::PrepareRate(string input_file_directory)
                 if (live_trigger_map.find(MBDNS_inclusive_ID) != live_trigger_map.end()) {
                     time_MBDNS_30cm_raw_counting_pair[ int((GL1Scalers_clock_raw) * bco_span) ].second += 1;
                 }
+            }
+
+            // note : in every second
+            if (time_MBDNS_zvtx.find( int((GL1Scalers_clock_raw) * bco_span) ) == time_MBDNS_zvtx.end())
+            {
+                time_MBDNS_zvtx[ int((GL1Scalers_clock_raw) * bco_span) ] = vector<double>();
+                time_MBDNS_zvtx[ int((GL1Scalers_clock_raw) * bco_span) ].push_back(mbd_z_vtx);
+            }
+            else 
+            {
+                time_MBDNS_zvtx[ int((GL1Scalers_clock_raw) * bco_span) ].push_back(mbd_z_vtx);
             }
 
             // note : in every second
@@ -426,6 +483,8 @@ void gl1_scaler_ana::PrepareRate(string input_file_directory)
         long long GL1Scalers_range_first_in;
         long long GL1Scalers_range_second_in;
 
+        vector<double> *MBD_zvtx_in = 0;
+
         rate_tree_in -> SetBranchAddress("ZDCS_raw_counting_front", &ZDCS_raw_counting_front_in);
         rate_tree_in -> SetBranchAddress("ZDCS_raw_counting_back", &ZDCS_raw_counting_back_in);
 
@@ -450,6 +509,8 @@ void gl1_scaler_ana::PrepareRate(string input_file_directory)
         rate_tree_in -> SetBranchAddress("GL1Scalers_range_first", &GL1Scalers_range_first_in);
         rate_tree_in -> SetBranchAddress("GL1Scalers_range_second", &GL1Scalers_range_second_in);
 
+        rate_tree_in -> SetBranchAddress("MBDNS_zvtx", &MBD_zvtx_in);
+
 
         for (int i = 0; i < rate_tree_in->GetEntries(); i++)
         {
@@ -463,6 +524,16 @@ void gl1_scaler_ana::PrepareRate(string input_file_directory)
             time_MBDNS_raw_counting[ i ] = {MBDNS_raw_counting_front_in, MBDNS_raw_counting_back_in};
             time_MBDNS_30cm_raw_counting_pair[ i ] = {MBDNS_30cm_raw_counting_first_in, MBDNS_30cm_raw_counting_second_in};
             time_GL1Scalers_range[ i ] = {GL1Scalers_range_first_in, GL1Scalers_range_second_in};
+
+            // note : for the vector
+            if (time_MBDNS_zvtx.find(i) == time_MBDNS_zvtx.end())
+            {
+                time_MBDNS_zvtx[i] = vector<double>();
+                for (int j = 0; j < MBD_zvtx_in->size(); j++)
+                {
+                    time_MBDNS_zvtx[i].push_back(MBD_zvtx_in->at(j));
+                }
+            }
         }        
 
         rate_file_in -> Close();
@@ -507,6 +578,8 @@ void gl1_scaler_ana::OutputRawRate(string output_file_directory)
     long long GL1Scalers_range_first;
     long long GL1Scalers_range_second;
 
+    vector<double> MBDNS_zvtx_out_vec;
+
     tree_out -> Branch("timestamp", &timestamp, "timestamp/I");
 
     tree_out -> Branch("ZDCS_raw_counting_front", &ZDCS_raw_counting_front, "ZDCS_raw_counting_front/L");
@@ -532,6 +605,8 @@ void gl1_scaler_ana::OutputRawRate(string output_file_directory)
 
     tree_out -> Branch("GL1Scalers_range_first", &GL1Scalers_range_first, "GL1Scalers_range_first/L");
     tree_out -> Branch("GL1Scalers_range_second", &GL1Scalers_range_second, "GL1Scalers_range_second/L");
+
+    tree_out -> Branch("MBDNS_zvtx", &MBDNS_zvtx_out_vec);
 
     for ( auto pair : time_ZDCS_raw_counting)
     {
@@ -560,6 +635,8 @@ void gl1_scaler_ana::OutputRawRate(string output_file_directory)
         GL1Scalers_range_first = time_GL1Scalers_range[pair.first].first;
         GL1Scalers_range_second = time_GL1Scalers_range[pair.first].second;
 
+        MBDNS_zvtx_out_vec = time_MBDNS_zvtx[pair.first];
+
         tree_out -> Fill();
     }
 
@@ -573,13 +650,15 @@ std::pair<TGraphErrors *, TGraphErrors *> gl1_scaler_ana::CombineMacro(string de
     cout<<endl;
     cout<<endl;
     cout<<"====================================== ====================================== ====================================== ======================================"<<endl;
-    cout<<"here we are runing the macro for the detector : "<<detector_name<<endl;
+    cout<<"here we are runing the gl1_scaler_ana::CombineMacro for the detector : "<<detector_name<<endl;
     SetDetectorName(detector_name);
 
     final_output_directory = output_directory + "/" + detector_selection;
     if (NCollision_corr) final_output_directory += "_NCorr";
     if (beam_intensity_corr) final_output_directory += "_ICorr";
     if (accidental_correction) final_output_directory += "_AcciCorr";
+    if (use_set_pos) final_output_directory += "_SetPos";
+    if (MBD_zvtx_effi) final_output_directory += "_ZvtxEffi";
     system(Form("mkdir -p %s", final_output_directory.c_str()));
     
     only_raw_rate_tag = only_raw_rate_tag_in;
@@ -593,7 +672,7 @@ std::pair<TGraphErrors *, TGraphErrors *> gl1_scaler_ana::CombineMacro(string de
         gr_raw_detectorNS_rate_vecH_wide[i] -> GetYaxis() -> SetTitle(Form("Raw %s trigger rate [Hz]", detector_selection.c_str()));
     }
 
-    if (NCollision_corr || beam_intensity_corr){
+    if (NCollision_corr || beam_intensity_corr || accidental_correction){
         gr_BPM_raw_detectorNS_rate_V -> GetYaxis() -> SetTitle(Form("Corrected %s trigger rate [Hz]", detector_selection.c_str()));
         gr_BPM_raw_detectorNS_rate_H -> GetYaxis() -> SetTitle(Form("Corrected %s trigger rate [Hz]", detector_selection.c_str()));
     }
@@ -702,7 +781,10 @@ void gl1_scaler_ana::PrepareData()
         outlier_rejection_factor_vecV,
         multi_collision_correction_V,
         fit_gaus_vecV,
-        accidental_correction_V
+        accidental_correction_V,
+        h1D_detectorNS_vertexZ_vecV,
+        h1D_detectorNS_vertexZ_postCorr_vecV,
+        detectorNS_zvtx_effi_correction_V
     );
 
     // note : for horizontal
@@ -720,7 +802,10 @@ void gl1_scaler_ana::PrepareData()
         outlier_rejection_factor_vecH,
         multi_collision_correction_H,
         fit_gaus_vecH,
-        accidental_correction_H
+        accidental_correction_H,
+        h1D_detectorNS_vertexZ_vecH,
+        h1D_detectorNS_vertexZ_postCorr_vecH,
+        detectorNS_zvtx_effi_correction_H
     );
 }
 
@@ -738,7 +823,10 @@ void gl1_scaler_ana::PrepareData_subfunc(
     vector<pair<double,double>> &outlier_rejection_factor_vec_All,
     vector<double> &multi_collision_correction_All,
     vector<TF1 *> &fit_gaus_vec_All,
-    vector<double> &accidental_correction_All
+    vector<double> &accidental_correction_All,
+    vector<TH1F *> &h1D_detectorNS_vertexZ_vecAll,
+    vector<TH1F *> &h1D_detectorNS_vertexZ_postCorr_vecAll,
+    vector<double> &detectorNS_zvtx_effi_correction_All
 )
 {
     // note : the time range of each scan step, for the case of vertical scan
@@ -760,6 +848,27 @@ void gl1_scaler_ana::PrepareData_subfunc(
                 pairE_vec.push_back({0.5, sqrt(double(vec.second.back() - vec.second.front()))});
                 // gr_raw_detectorNS_rate_vec_All[i] -> SetPoint(gr_raw_detectorNS_rate_vec_All[i]->GetN(), vec.first + 0.5, vec.second.back() - vec.second.front() + 1);
                 // gr_raw_detectorNS_rate_vec_All[i] -> SetPointError(gr_raw_detectorNS_rate_vec_All[i]->GetN() - 1, 0.5, sqrt(double(vec.second.back() - vec.second.front())));
+
+                if (detector_selection == "MBDNS")
+                {
+                    for (int vtx_i = 0; vtx_i < time_MBDNS_zvtx[vec.first].size(); vtx_i++){
+                        if (time_MBDNS_zvtx[vec.first][vtx_i] == -999) {continue;}
+                        h1D_detectorNS_vertexZ_vecAll[i] -> Fill(time_MBDNS_zvtx[vec.first][vtx_i]);
+                    }
+
+                    if (MBD_zvtx_effi)
+                    {
+                        if (MBD_vtxZ_effi_func == nullptr) {
+                            cout<<"Error : MBD_vtxZ_effi_func is not defined"<<endl;
+                            exit(1);
+                        }
+
+                        for (int vtx_i = 0; vtx_i < time_MBDNS_zvtx[vec.first].size(); vtx_i++){
+                            if (time_MBDNS_zvtx[vec.first][vtx_i] == -999) {continue;}
+                            h1D_detectorNS_vertexZ_postCorr_vecAll[i] -> Fill(time_MBDNS_zvtx[vec.first][vtx_i], 1. / MBD_vtxZ_effi_func ->Eval(time_MBDNS_zvtx[vec.first][vtx_i]));
+                        }
+                    }
+                }
             }
 
             if (vec.first >= (range_t_All[i].first - width_range_time) && vec.first <= (range_t_All[i].second + width_range_time))
@@ -823,12 +932,23 @@ void gl1_scaler_ana::PrepareData_subfunc(
         DetectorNS_rate_avg_vec_All_error.push_back(fit_vec_All[i]->GetParError(0));
     }
 
+    // note : to compute the MBDNS vertex Z efficiency corrections
+    if (detector_selection == "MBDNS" && MBD_zvtx_effi)
+    {
+        PrepareMBDvtxZEffi(
+            direction_string,
+            h1D_detectorNS_vertexZ_vecAll, 
+            h1D_detectorNS_vertexZ_postCorr_vecAll, 
+            detectorNS_zvtx_effi_correction_All
+        );
+    }
+
     // note : to compute the multi-collision correction factor
     for (int i = 0; i < step_selected_T_range_All.size(); i++)
     {        
         // cout<<"Vertical scan, Time range : "<<step_selected_T_range_All[i].second<<" - "<<step_selected_T_range_All[i].first<<" s = "<<step_selected_T_range_All[i].second - step_selected_T_range_All[i].first<<endl;
         double total_crossing = (step_selected_T_range_All[i].second - step_selected_T_range_All[i].first) * (n_bunches / n_bunches_space);
-        double Ntrigger = step_counting_range_All[i].second - step_counting_range_All[i].first;
+        double Ntrigger = (detector_selection == "MBDNS" && MBD_zvtx_effi) ? (step_counting_range_All[i].second - step_counting_range_All[i].first) * detectorNS_zvtx_effi_correction_All[i] : step_counting_range_All[i].second - step_counting_range_All[i].first;
         double the_ratio = Ntrigger / (total_crossing);
         double poisson_lambda = -1.0 * TMath::Log( 1 - the_ratio );
         double multi_collision_ratio = (1 - TMath::Poisson(0,poisson_lambda) - TMath::Poisson(1,poisson_lambda))/(1 - TMath::Poisson(0,poisson_lambda));
@@ -884,6 +1004,8 @@ void gl1_scaler_ana::PrepareData_subfunc(
         cout<<"=================================== =================================== =================================== ==================================="<<endl;
     }
 
+    
+
     // note : for the accidental correction factor of ZDCNS
     // note : method quoted from Angelica's method
     if (detector_selection == "ZDCNS")
@@ -909,6 +1031,29 @@ void gl1_scaler_ana::PrepareData_subfunc(
 
         }
     }
+}
+
+void gl1_scaler_ana::PrepareMBDvtxZEffi(
+    string direction_string,
+    vector<TH1F *> &h1D_detectorNS_vertexZ_vecAll,
+    vector<TH1F *> &h1D_detectorNS_vertexZ_postCorr_vecAll,
+    vector<double> &detectorNS_zvtx_effi_correction_All
+)
+{   
+    if (h1D_detectorNS_vertexZ_vecAll.size() != detectorNS_zvtx_effi_correction_All.size()){
+        cout<<"Error : h1D_h1D_detectorNS_vertexZ_vecAll.size() != detectorNS_zvtx_effi_correction_All.size()"<<endl;
+        exit(1);
+    }
+
+    cout<<"=================================== =================================== MBDNS zvtx effi corr =================================== ==================================="<<endl;    
+
+    for (int i = 0; i < h1D_detectorNS_vertexZ_vecAll.size(); i++)
+    {
+        detectorNS_zvtx_effi_correction_All.push_back(h1D_detectorNS_vertexZ_postCorr_vecAll[i]->GetSumOfWeights() / h1D_detectorNS_vertexZ_vecAll[i]->GetSumOfWeights());
+        cout<<direction_string<<" scan step "<<i<<" : MBDNS zvtx effi correction factor : "<<detectorNS_zvtx_effi_correction_All[i]<<endl;
+    }   
+
+    cout<<"=================================== =================================== MBDNS zvtx effi corr =================================== ==================================="<<endl;
 }
 
 void gl1_scaler_ana::CombineData()
@@ -937,7 +1082,7 @@ void gl1_scaler_ana::CombineData()
         gr_BPM_raw_detectorNS_rate_V -> SetPointError(i, StdDev_BPM_pos_V[i], DetectorNS_rate_avg_vecV_error[i]);
 
         gr_BPM_raw_detectorNS_rate_V_demo -> SetPoint(i, Average_BPM_pos_V[i], Y_point);
-        gr_BPM_raw_detectorNS_rate_V_demo -> SetPointError(i, StdDev_BPM_pos_V[i], DetectorNS_rate_avg_vecV_error[i] * demo_factor);
+        gr_BPM_raw_detectorNS_rate_V_demo -> SetPointError(i, StdDev_BPM_pos_V[i] * demo_factor.first, DetectorNS_rate_avg_vecV_error[i] * demo_factor.second);
     }
 
     for (int i = 0; i < range_t_H.size(); i++)
@@ -962,7 +1107,7 @@ void gl1_scaler_ana::CombineData()
         gr_BPM_raw_detectorNS_rate_H -> SetPointError(i, StdDev_BPM_pos_H[i], DetectorNS_rate_avg_vecH_error[i]);
 
         gr_BPM_raw_detectorNS_rate_H_demo -> SetPoint(i, Average_BPM_pos_H[i], Y_point);
-        gr_BPM_raw_detectorNS_rate_H_demo -> SetPointError(i, StdDev_BPM_pos_H[i], DetectorNS_rate_avg_vecH_error[i] * demo_factor);
+        gr_BPM_raw_detectorNS_rate_H_demo -> SetPointError(i, StdDev_BPM_pos_H[i] * demo_factor.first, DetectorNS_rate_avg_vecH_error[i] * demo_factor.second);
     }
 
     cout<<"Vertical scan : "<<endl;
@@ -977,39 +1122,83 @@ void gl1_scaler_ana::CombineData()
         cout<<"BPM position : "<<Average_BPM_pos_H[i]<<" mm, "<<detector_selection<<" rate : "<<DetectorNS_rate_avg_vecH[i]<<" Hz, Error : "<<DetectorNS_rate_avg_vecH_error[i]<<" Hz"<<endl;
     }
 
+    // note : par[0] : size
+    // note : par[1] : mean
+    // note : par[2] : width
+    // note : par[3] : offset
+
+    double max_location_V = gl1_scaler_ana::FindHighestEntry_gr(gr_BPM_raw_detectorNS_rate_V).first; 
+    double max_V = gl1_scaler_ana::FindHighestEntry_gr(gr_BPM_raw_detectorNS_rate_V).second;
+    double max_location_H = gl1_scaler_ana::FindHighestEntry_gr(gr_BPM_raw_detectorNS_rate_H).first; 
+    double max_H = gl1_scaler_ana::FindHighestEntry_gr(gr_BPM_raw_detectorNS_rate_H).second;
+
+    fit_Gaus_V -> SetParameters(max_V, max_location_V, nominal_width, 0);
     gr_BPM_raw_detectorNS_rate_V -> Fit(fit_Gaus_V, "N");
+    fit_Gaus_H -> SetParameters(max_H, max_location_H, nominal_width, 0);
     gr_BPM_raw_detectorNS_rate_H -> Fit(fit_Gaus_H, "N");
 
     return;
 }
 
-double gl1_scaler_ana::FindHighestEntry_grE(TGraphErrors * gr)
+template <typename T>
+// typename std::enabel_if<std::is_base_of<TGraph, T>::value || std::is_base_of<TGraphErrors, T>::value, double>::type
+pair<double, double> gl1_scaler_ana::FindHighestEntry_gr(T * gr)
 {
     double max;
+    double max_location;
     for (int i = 0; i < gr->GetN(); i++)
     {
-        if (i == 0) {max = gr->GetPointY(i);}
+        if (i == 0) {
+            max = gr->GetPointY(i);
+            max_location = gr->GetPointX(i);
+        }
         else 
         {
-            if (gr->GetPointY(i) > max) {max = gr->GetPointY(i);}
+            if (gr->GetPointY(i) > max) {
+                max = gr->GetPointY(i);
+                max_location = gr->GetPointX(i);
+            }
         }
     }
-    return max;
+    return {max_location, max};
 }
 
-double gl1_scaler_ana::FindHighestEntry_gr(TGraph * gr)
-{
-    double max;
-    for (int i = 0; i < gr->GetN(); i++)
-    {
-        if (i == 0) {max = gr->GetPointY(i);}
-        else 
-        {
-            if (gr->GetPointY(i) > max) {max = gr->GetPointY(i);}
-        }
-    }
-    return max;
-}
+// double gl1_scaler_ana::FindHighestEntry_gr(TObject * gr)
+// {
+//     if ()
+
+//     if (gr -> ClassName() != std::string("TGraphErrors") && gr -> ClassName() != std::string("TGraph"))
+//     {
+//         cout<<"The input object is not TGraph or TGraphErrors, please check the input object"<<endl;
+//         exit(1);
+//     }
+
+
+//     double max;
+//     for (int i = 0; i < gr->GetN(); i++)
+//     {
+//         if (i == 0) {max = gr->GetPointY(i);}
+//         else 
+//         {
+//             if (gr->GetPointY(i) > max) {max = gr->GetPointY(i);}
+//         }
+//     }
+//     return max;
+// }
+
+// double gl1_scaler_ana::FindHighestEntry_gr(TGraph * gr)
+// {
+//     double max;
+//     for (int i = 0; i < gr->GetN(); i++)
+//     {
+//         if (i == 0) {max = gr->GetPointY(i);}
+//         else 
+//         {
+//             if (gr->GetPointY(i) > max) {max = gr->GetPointY(i);}
+//         }
+//     }
+//     return max;
+// }
 
 
 
@@ -1197,13 +1386,60 @@ void gl1_scaler_ana::DrawPlots()
     c1 -> Clear();
 
     // note : ============================ ============================ ============================ ============================ ============================
+    if (detector_selection == "MBDNS")
+    {
+        c1 -> cd();
+        c1 -> Print(Form("%s/h1D_MBDNS_vtxZ_vecV.pdf(", final_output_directory.c_str()));
+        for(int i = 0; i < h1D_detectorNS_vertexZ_vecV.size(); i++)
+        {
+            h1D_detectorNS_vertexZ_vecV[i] -> Draw("hist");
+            c1 -> Print(Form("%s/h1D_MBDNS_vtxZ_vecV.pdf", final_output_directory.c_str()));
+            c1 -> Clear();
+        }
+        c1 -> Print(Form("%s/h1D_MBDNS_vtxZ_vecV.pdf)", final_output_directory.c_str()));
+        c1 -> Clear();
+
+        c1 -> cd();
+        c1 -> Print(Form("%s/h1D_MBDNS_vtxZ_vecH.pdf(", final_output_directory.c_str()));
+        for(int i = 0; i < h1D_detectorNS_vertexZ_vecH.size(); i++)
+        {
+            h1D_detectorNS_vertexZ_vecH[i] -> Draw("hist");
+            c1 -> Print(Form("%s/h1D_MBDNS_vtxZ_vecH.pdf", final_output_directory.c_str()));
+            c1 -> Clear();
+        }
+        c1 -> Print(Form("%s/h1D_MBDNS_vtxZ_vecH.pdf)", final_output_directory.c_str()));
+        c1 -> Clear();
+
+
+
+        TCanvas * c2 = new TCanvas("c2","c2",1500,800);
+        c2 -> Divide(4,3);
+        for (int i = 0; i < h1D_detectorNS_vertexZ_vecV.size(); i++)
+        {
+            c2 -> cd(i+1);
+            h1D_detectorNS_vertexZ_vecV[i] -> Draw("hist");
+        }
+        c2 -> Print(Form("%s/h1D_detectorNS_vertexZ_vecV_grid.pdf", final_output_directory.c_str()));
+        c2 -> Clear();
+
+        c2 -> Divide(4,3);
+        for (int i = 0; i < h1D_detectorNS_vertexZ_vecH.size(); i++)
+        {
+            c2 -> cd(i+1);
+            h1D_detectorNS_vertexZ_vecH[i] -> Draw("hist");
+        }
+        c2 -> Print(Form("%s/h1D_detectorNS_vertexZ_vecH_grid.pdf", final_output_directory.c_str()));
+        c2 -> Clear();
+    }
+
+    // note : ============================ ============================ ============================ ============================ ============================
 
     c1 -> cd();
-    gr_BPM_raw_detectorNS_rate_V -> GetYaxis() -> SetRangeUser( 0, gl1_scaler_ana::FindHighestEntry_grE(gr_BPM_raw_detectorNS_rate_V) * 1.7 );
+    gr_BPM_raw_detectorNS_rate_V -> GetYaxis() -> SetRangeUser( 0, (gl1_scaler_ana::FindHighestEntry_gr(gr_BPM_raw_detectorNS_rate_V)).second * 1.7 );
     gr_BPM_raw_detectorNS_rate_V -> Draw("AP");
     gr_BPM_raw_detectorNS_rate_V_demo -> Draw("Psame");
     fit_Gaus_V -> Draw("lsame");
-    draw_text -> DrawLatex(0.22, 0.88, Form("#splitline{Y error bars are timed by %.0f for visibility,}{original error bars included in the fit}", demo_factor));
+    draw_text -> DrawLatex(0.22, 0.88, Form("#splitline{Error bars are timed %.0f (X), %.0f (Y) for visibility,}{original error bars included in the fit}", demo_factor.first, demo_factor.second));
     draw_text -> DrawLatex(0.22, 0.80, Form("Fit height: %.3f #pm %.3f", fit_Gaus_V->GetParameter(0), fit_Gaus_V->GetParError(0)));
     draw_text -> DrawLatex(0.22, 0.76, Form("Fit mean: %.3f #pm %.6f mm", fit_Gaus_V->GetParameter(1), fit_Gaus_V->GetParError(1)));
     draw_text -> DrawLatex(0.22, 0.72, Form("Fit width: %.5f #pm %.6f mm", fit_Gaus_V->GetParameter(2), fit_Gaus_V->GetParError(2)));
@@ -1215,11 +1451,11 @@ void gl1_scaler_ana::DrawPlots()
     c1 -> Clear();
 
     c1 -> cd();
-    gr_BPM_raw_detectorNS_rate_H -> GetYaxis() -> SetRangeUser( 0, gl1_scaler_ana::FindHighestEntry_grE(gr_BPM_raw_detectorNS_rate_H) * 1.7 );
+    gr_BPM_raw_detectorNS_rate_H -> GetYaxis() -> SetRangeUser( 0, (gl1_scaler_ana::FindHighestEntry_gr(gr_BPM_raw_detectorNS_rate_H)).second * 1.7 );
     gr_BPM_raw_detectorNS_rate_H -> Draw("AP");
     gr_BPM_raw_detectorNS_rate_H_demo -> Draw("Psame");
     fit_Gaus_H -> Draw("lsame");
-    draw_text -> DrawLatex(0.22, 0.88, Form("#splitline{Y error bars are timed by %.0f for visibility,}{original error bars included in the fit}", demo_factor));
+    draw_text -> DrawLatex(0.22, 0.88, Form("#splitline{Error bars are timed %.0f (X), %.0f (Y) for visibility,}{original error bars included in the fit}", demo_factor.first, demo_factor.second));
     draw_text -> DrawLatex(0.22, 0.80, Form("Fit height: %.3f #pm %.3f", fit_Gaus_H->GetParameter(0), fit_Gaus_H->GetParError(0)));
     draw_text -> DrawLatex(0.22, 0.76, Form("Fit mean: %.3f #pm %.6f mm", fit_Gaus_H->GetParameter(1), fit_Gaus_H->GetParError(1)));
     draw_text -> DrawLatex(0.22, 0.72, Form("Fit width: %.5f #pm %.6f mm", fit_Gaus_H->GetParameter(2), fit_Gaus_H->GetParError(2)));
@@ -1246,6 +1482,7 @@ void gl1_scaler_ana::ClearUp()
     step_selected_T_range_V.clear();
     step_counting_range_V.clear();
     multi_collision_correction_V.clear();
+    accidental_correction_V.clear();
     gr_BPM_raw_detectorNS_rate_V -> Set(0);
     gr_BPM_raw_detectorNS_rate_V_demo -> Set(0);
     fit_Gaus_V -> SetParameters(9.32502e+05, -8.97690e-01, 2.99013e-01, 0);
@@ -1253,6 +1490,7 @@ void gl1_scaler_ana::ClearUp()
     step_selected_T_range_H.clear();
     step_counting_range_H.clear();
     multi_collision_correction_H.clear();
+    accidental_correction_H.clear();
     gr_BPM_raw_detectorNS_rate_H -> Set(0);
     gr_BPM_raw_detectorNS_rate_H_demo -> Set(0);
     fit_Gaus_H -> SetParameters(9.56217e+05, 1.44200e+00, 3.01624e-01, 0);
@@ -1282,6 +1520,26 @@ void gl1_scaler_ana::ClearUp()
     outlier_rejection_factor_vecH.clear();
     fit_gaus_vecV.clear();
     fit_gaus_vecH.clear();
+}
+
+void gl1_scaler_ana::SaveHistROOT()
+{
+    TFile * file_in = new TFile(Form("%s/hist_out.root", final_output_directory.c_str()), "RECREATE");
+    if (detector_selection == "MBDNS")
+    {
+        for (int i = 0; i < h1D_detectorNS_vertexZ_vecV.size(); i++)
+        {
+            h1D_detectorNS_vertexZ_vecV[i] -> Write(Form("MBDvtxZ_Vertical_scan_step_%d", i));
+        }
+
+        for (int i = 0; i < h1D_detectorNS_vertexZ_vecH.size(); i++)
+        {
+            h1D_detectorNS_vertexZ_vecH[i] -> Write(Form("MBDvtxZ_Horizontal_scan_step_%d", i));
+        }
+    }
+
+    file_in -> Close();
+
 }
 
 void gl1_scaler_ana::PrintInfo(string scan_direction_string, vector<pair<string, TGraphErrors *>> vector_in, int column_size)
@@ -1436,12 +1694,25 @@ void gl1_scaler_ana::ImportCADReadings(string cad_reading_directory, bool SD_col
 
     BPM_StdDev = SD_column;
 
-    Average_BPM_pos_V = Average_V;
+    if (use_set_pos) {
+        Average_BPM_pos_V = BPM_set_pos_V;
+    }
+    else {
+        Average_BPM_pos_V = Average_V;
+    }
     StdDev_BPM_pos_V = StdDev_V;
     BeamIntensity_corr_V = DCCT_correction_V;
-    Average_BPM_pos_H = Average_H;
+    
+
+    if (use_set_pos) {
+        Average_BPM_pos_H = BPM_set_pos_H;
+    }
+    else {
+        Average_BPM_pos_H = Average_H;
+    }
     StdDev_BPM_pos_H = StdDev_H;
     BeamIntensity_corr_H = DCCT_correction_H;
+    
     DCCT_B = DCCT_B_avg[0];
     DCCT_Y = DCCT_Y_avg[0];
 
@@ -1460,6 +1731,7 @@ void gl1_scaler_ana::GetMachineLumi()
 
     machine_lumi = (fbeam / (2 * M_PI * width_beam_overlap_X * width_beam_overlap_Y)) * (DCCT_B_one_bunch * DCCT_Y_one_bunch) * um2_to_mb;
     cout<<"================= ================= ================= ================= ================= ================= ================= ================="<<endl;
+    cout<<"DCCT_B_one_bunch : "<<DCCT_B_one_bunch<<", DCCT_Y_one_bunch : "<<DCCT_Y_one_bunch<<endl;
     cout<<"Final directory : "<<final_output_directory<<endl;
     cout<<"width_beam_overlap_X : "<<width_beam_overlap_X<<" um, width_beam_overlap_Y : "<<width_beam_overlap_Y<<" um"<<endl;
     cout<<"Machine luminosity : "<<machine_lumi<<" mb^-1 s^-1"<<endl;
@@ -1472,12 +1744,25 @@ void gl1_scaler_ana::GetDetectorCrossSection()
     double V_gaus_total_height = fit_Gaus_V->GetParameter(0) + fit_Gaus_V -> GetParameter(3); // todo : if we end up with having the double gaussian, modify here
     double H_gaus_total_height = fit_Gaus_H->GetParameter(0) + fit_Gaus_H -> GetParameter(3); // todo : if we end up with having the double gaussian, modify here
     double Rmax_avg =  ((V_gaus_total_height + H_gaus_total_height) / 2.);
-    double Rmax_avg_single_bunch =   Rmax_avg/ n_bunches;
+    Rmax_avg_single_bunch =   Rmax_avg/ n_bunches;
     double vertexZ_effi = 1.0; // todo : if we end up with changing the selecting region of vertex Z, we will have to look in to the detector efficiency
 
-    double detector_crossingsection = Rmax_avg_single_bunch / (machine_lumi * vertexZ_effi);
+    detector_cross_section = Rmax_avg_single_bunch / (machine_lumi * vertexZ_effi);
     cout<<"Average Rmax : "<<Rmax_avg<<" Hz, Rmax_avg_single_bunch : "<<Rmax_avg_single_bunch<<" Hz " <<endl; 
-    cout<< detector_selection << " cross section : "<<detector_crossingsection<<" mb"<<endl;
+    cout<< detector_selection << " cross section : "<<detector_cross_section<<" mb"<<endl;
     cout<<"\n\n\n\n\n"<<endl;
+
+}
+
+void gl1_scaler_ana::GetInformation()
+{
+    cout<<std::setw(15)<<"--->"<<detector_selection<<"_"<<NCollision_corr<<"_"<<beam_intensity_corr<<"_"<<accidental_correction<<"_"<<use_set_pos
+    <<std::setw(7)<<", H_width: "<<fit_Gaus_H->GetParameter(2) <<" mm"
+    <<std::setw(7)<<", V_width: "<<fit_Gaus_V->GetParameter(2) <<" mm"
+    <<std::setw(7)<<", Machine Lumi : "<<machine_lumi<<" mb^-1 s^-1"
+    <<std::setw(7)<<", cross section : "<<detector_cross_section<<" mb"
+    <<std::setw(7)<<", avg. Rmax : "<<Rmax_avg_single_bunch<<" Hz"
+    <<endl;
+
 
 }
