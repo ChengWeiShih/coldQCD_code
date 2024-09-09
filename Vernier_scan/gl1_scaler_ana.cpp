@@ -64,14 +64,19 @@ MBD_zvtx_effi(MBD_zvtx_effi_in)
     tree->SetBranchStatus("GL1Scalers_MBDNS_raw", 1);
     tree->SetBranchStatus("GL1Scalers_MBDNS_live", 1);
     tree->SetBranchStatus("GL1Scalers_MBDNS_scaled", 1);
+    tree->SetBranchStatus("LiveTrigger_Decimal", 1);
     tree->SetBranchStatus("mbd_z_vtx",  1);
+    tree->SetBranchStatus("zdc_z_vtx", 1);
 
     tree->SetBranchAddress("evtID", &evtID);
     tree->SetBranchAddress("evtBCO_gl1", &evtBCO_gl1);
     tree->SetBranchAddress("bunchnumber", &bunchnumber);
     tree->SetBranchAddress("GTMBusyVector_Decimal", &GTMBusyVector_Decimal);
     tree->SetBranchAddress("LiveTrigger_Vec", &live_trigger_vec);
+    tree->SetBranchAddress("LiveTrigger_Decimal", &LiveTrigger_Decimal);
+
     tree->SetBranchAddress("mbd_z_vtx", &mbd_z_vtx);
+    tree->SetBranchAddress("zdc_z_vtx", &zdc_z_vtx);
 
     tree->SetBranchAddress("GL1Scalers_clock_raw", &GL1Scalers_clock_raw);
     tree->SetBranchAddress("GL1Scalers_clock_live", &GL1Scalers_clock_live);
@@ -109,7 +114,9 @@ MBD_zvtx_effi(MBD_zvtx_effi_in)
     time_MBDN_raw_counting.clear();
     time_MBDNS_raw_counting.clear();
     time_MBDNS_30cm_raw_counting_pair.clear();
+    time_LiveTrigger_Decimal.clear();
     time_MBDNS_zvtx.clear();
+    time_ZDCNS_zvtx.clear();
     time_detectorNS_raw_counting.clear();
     time_GL1Scalers_range.clear();
     step_selected_T_range_V.clear();
@@ -382,6 +389,28 @@ void gl1_scaler_ana::PrepareRate(string input_file_directory)
             }
 
             // note : in every second
+            if (time_ZDCNS_zvtx.find( int((GL1Scalers_clock_raw) * bco_span) ) == time_ZDCNS_zvtx.end())
+            {
+                time_ZDCNS_zvtx[ int((GL1Scalers_clock_raw) * bco_span) ] = vector<double>();
+                time_ZDCNS_zvtx[ int((GL1Scalers_clock_raw) * bco_span) ].push_back(zdc_z_vtx);
+            }
+            else 
+            {
+                time_ZDCNS_zvtx[ int((GL1Scalers_clock_raw) * bco_span) ].push_back(zdc_z_vtx);
+            }
+
+            // note : in every second
+            if (time_LiveTrigger_Decimal.find( int((GL1Scalers_clock_raw) * bco_span) ) == time_LiveTrigger_Decimal.end())
+            {
+                time_LiveTrigger_Decimal[ int((GL1Scalers_clock_raw) * bco_span) ] = vector<long long>();
+                time_LiveTrigger_Decimal[ int((GL1Scalers_clock_raw) * bco_span) ].push_back(LiveTrigger_Decimal);
+            }
+            else 
+            {
+                time_LiveTrigger_Decimal[ int((GL1Scalers_clock_raw) * bco_span) ].push_back(LiveTrigger_Decimal);
+            }
+
+            // note : in every second
             if (time_ZDCS_raw_counting.find( int((GL1Scalers_clock_raw) * bco_span) ) == time_ZDCS_raw_counting.end())
             {
                 time_ZDCS_raw_counting[ int((GL1Scalers_clock_raw) * bco_span) ] = vector<long long>();
@@ -465,6 +494,8 @@ void gl1_scaler_ana::PrepareRate(string input_file_directory)
         TFile * rate_file_in = TFile::Open(input_file_directory.c_str());
         TTree * rate_tree_in = (TTree*)rate_file_in->Get("tree");
 
+        int timestamp;
+
         long long ZDCS_raw_counting_front_in;
         long long ZDCS_raw_counting_back_in;
         long long ZDCN_raw_counting_front_in;
@@ -484,6 +515,10 @@ void gl1_scaler_ana::PrepareRate(string input_file_directory)
         long long GL1Scalers_range_second_in;
 
         vector<double> *MBD_zvtx_in = 0;
+        vector<double> *ZDC_zvtx_in = 0;
+        vector<long long> *LiveTrigger_Decimal_in = 0;
+
+        rate_tree_in -> SetBranchAddress("timestamp", &timestamp);
 
         rate_tree_in -> SetBranchAddress("ZDCS_raw_counting_front", &ZDCS_raw_counting_front_in);
         rate_tree_in -> SetBranchAddress("ZDCS_raw_counting_back", &ZDCS_raw_counting_back_in);
@@ -510,28 +545,50 @@ void gl1_scaler_ana::PrepareRate(string input_file_directory)
         rate_tree_in -> SetBranchAddress("GL1Scalers_range_second", &GL1Scalers_range_second_in);
 
         rate_tree_in -> SetBranchAddress("MBDNS_zvtx", &MBD_zvtx_in);
+        rate_tree_in -> SetBranchAddress("ZDCNS_zvtx", &ZDC_zvtx_in);
 
+        rate_tree_in -> SetBranchAddress("LiveTrigger_Decimal", &LiveTrigger_Decimal_in);
 
         for (int i = 0; i < rate_tree_in->GetEntries(); i++)
         {
             rate_tree_in -> GetEntry(i);
 
-            time_ZDCS_raw_counting[ i ] = {ZDCS_raw_counting_front_in, ZDCS_raw_counting_back_in};
-            time_ZDCN_raw_counting[ i ] = {ZDCN_raw_counting_front_in, ZDCN_raw_counting_back_in};
-            time_ZDCNS_raw_counting[ i ] = {ZDCNS_raw_counting_front_in, ZDCNS_raw_counting_back_in};
-            time_MBDS_raw_counting[ i ] = {MBDS_raw_counting_front_in, MBDS_raw_counting_back_in};
-            time_MBDN_raw_counting[ i ] = {MBDN_raw_counting_front_in, MBDN_raw_counting_back_in};
-            time_MBDNS_raw_counting[ i ] = {MBDNS_raw_counting_front_in, MBDNS_raw_counting_back_in};
-            time_MBDNS_30cm_raw_counting_pair[ i ] = {MBDNS_30cm_raw_counting_first_in, MBDNS_30cm_raw_counting_second_in};
-            time_GL1Scalers_range[ i ] = {GL1Scalers_range_first_in, GL1Scalers_range_second_in};
+            time_ZDCS_raw_counting[ timestamp ] = {ZDCS_raw_counting_front_in, ZDCS_raw_counting_back_in};
+            time_ZDCN_raw_counting[ timestamp ] = {ZDCN_raw_counting_front_in, ZDCN_raw_counting_back_in};
+            time_ZDCNS_raw_counting[ timestamp ] = {ZDCNS_raw_counting_front_in, ZDCNS_raw_counting_back_in};
+            time_MBDS_raw_counting[ timestamp ] = {MBDS_raw_counting_front_in, MBDS_raw_counting_back_in};
+            time_MBDN_raw_counting[ timestamp ] = {MBDN_raw_counting_front_in, MBDN_raw_counting_back_in};
+            time_MBDNS_raw_counting[ timestamp ] = {MBDNS_raw_counting_front_in, MBDNS_raw_counting_back_in};
+            time_MBDNS_30cm_raw_counting_pair[ timestamp ] = {MBDNS_30cm_raw_counting_first_in, MBDNS_30cm_raw_counting_second_in};
+            time_GL1Scalers_range[ timestamp ] = {GL1Scalers_range_first_in, GL1Scalers_range_second_in};
 
             // note : for the vector
-            if (time_MBDNS_zvtx.find(i) == time_MBDNS_zvtx.end())
+            if (time_MBDNS_zvtx.find(timestamp) == time_MBDNS_zvtx.end())
             {
-                time_MBDNS_zvtx[i] = vector<double>();
+                time_MBDNS_zvtx[timestamp] = vector<double>();
                 for (int j = 0; j < MBD_zvtx_in->size(); j++)
                 {
-                    time_MBDNS_zvtx[i].push_back(MBD_zvtx_in->at(j));
+                    time_MBDNS_zvtx[timestamp].push_back(MBD_zvtx_in->at(j));
+                }
+            }
+
+            // note : for the vector
+            if (time_ZDCNS_zvtx.find(timestamp) == time_ZDCNS_zvtx.end())
+            {
+                time_ZDCNS_zvtx[timestamp] = vector<double>();
+                for (int j = 0; j < ZDC_zvtx_in->size(); j++)
+                {
+                    time_ZDCNS_zvtx[timestamp].push_back(ZDC_zvtx_in->at(j));
+                }
+            }
+
+            // note : for the vector
+            if (time_LiveTrigger_Decimal.find(timestamp) == time_LiveTrigger_Decimal.end())
+            {
+                time_LiveTrigger_Decimal[timestamp] = vector<long long>();
+                for (int j = 0; j < LiveTrigger_Decimal_in->size(); j++)
+                {
+                    time_LiveTrigger_Decimal[timestamp].push_back(LiveTrigger_Decimal_in->at(j));
                 }
             }
         }        
@@ -579,6 +636,8 @@ void gl1_scaler_ana::OutputRawRate(string output_file_directory)
     long long GL1Scalers_range_second;
 
     vector<double> MBDNS_zvtx_out_vec;
+    vector<double> ZDCNS_zvtx_out_vec;
+    vector<long long> LiveTrigger_Decimal_out_vec;
 
     tree_out -> Branch("timestamp", &timestamp, "timestamp/I");
 
@@ -607,6 +666,11 @@ void gl1_scaler_ana::OutputRawRate(string output_file_directory)
     tree_out -> Branch("GL1Scalers_range_second", &GL1Scalers_range_second, "GL1Scalers_range_second/L");
 
     tree_out -> Branch("MBDNS_zvtx", &MBDNS_zvtx_out_vec);
+    tree_out -> Branch("ZDCNS_zvtx", &ZDCNS_zvtx_out_vec);
+
+    tree_out -> Branch("LiveTrigger_Decimal", &LiveTrigger_Decimal_out_vec);
+
+    cout<<"In gl1_scaler_ana::OutputRawRate, "<<00000<<endl;
 
     for ( auto pair : time_ZDCS_raw_counting)
     {
@@ -635,7 +699,19 @@ void gl1_scaler_ana::OutputRawRate(string output_file_directory)
         GL1Scalers_range_first = time_GL1Scalers_range[pair.first].first;
         GL1Scalers_range_second = time_GL1Scalers_range[pair.first].second;
 
+        cout<<"In gl1_scaler_ana::OutputRawRate, "<<11111<<endl;
+
         MBDNS_zvtx_out_vec = time_MBDNS_zvtx[pair.first];
+
+        cout<<"In gl1_scaler_ana::OutputRawRate, "<<22222<<endl;
+
+        ZDCNS_zvtx_out_vec = time_ZDCNS_zvtx[pair.first];
+        
+        cout<<"In gl1_scaler_ana::OutputRawRate, "<<33333<<endl;
+        
+        LiveTrigger_Decimal_out_vec = time_LiveTrigger_Decimal[pair.first];
+
+        cout<<"In gl1_scaler_ana::OutputRawRate, "<<4444<<endl;
 
         tree_out -> Fill();
     }

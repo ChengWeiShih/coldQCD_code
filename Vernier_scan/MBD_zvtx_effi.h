@@ -4,6 +4,7 @@
 #include "gl1_scaler_ana.h"
 #include <TGaxis.h>
 #include <TF1.h>
+#include <bitset>
 
 class MBD_zvtx_effi : public gl1_scaler_ana
 {
@@ -17,19 +18,13 @@ class MBD_zvtx_effi : public gl1_scaler_ana
             vector<pair<int,int>> range_t_H_in
         );
 
-        void MBD_vtxZ_macro(int total_trials = 100, bool run_simple = true);
+        void RunMacro();
 
-        void MakeMBD_vertexZ_hist_func(
-            vector<pair<int,int>> &range_t_All, 
-            vector<TH1F *> &h1D_detectorNS_vertexZ_vecAll,
-            map<int, TF1 *> &fit_gaus_map_all,
-            TF1 * MBD_z_effi, // note : Gaussian distribution describing the vertex Z efficiency resolution
-            bool apply_effi_corr = false
-        );
         
-        vector<TGraph *> GetRchi2_TGraph();
-
-        void DrawPlots(int selection = 1);
+        
+        vector<TF1 *> GetEffiFitFuncSeparate();
+        vector<TF1 *> GetEffiFitFuncComb();
+        void DrawPlots() override;
         void ClearUp() override;
 
         static double negative_pol2(double *x, double *par)
@@ -47,22 +42,44 @@ class MBD_zvtx_effi : public gl1_scaler_ana
         template <typename T> static pair<double, double> FindLowestEntry_gr(T * gr);
 
     protected:
+        std::vector<int> prepare_trigger_vec(long long trigger_input);
+        void Make_detector_vtxZ(
+            string direction_string,
+            vector<pair<int,int>> &range_t_All, 
+            map<string, vector<TH1F *>> &h1D_detectorNS_vtxZ_mapAll
+        );
+
+        void DeriveMBDEffi(
+            map<string, vector<TH1F *>> &h1D_detectorNS_vtxZ_mapAll,
+            map<string, vector<TF1 *>> &effi_fitting_vecAll
+        );
+
+        void PrepareCombine();
+
         string input_rate_file;
-        vector<int> chosen_scan_steps;
+        vector<int> chosen_scan_steps; 
+
+        map<string, vector<TH1F *>> h1D_detectorNS_vtxZ_mapV;
+        map<string, vector<TH1F *>> h1D_detectorNS_vtxZ_mapH;
+        map<string, vector<TF1 *>> effi_fitting_vecV;
+        map<string, vector<TF1 *>> effi_fitting_vecH;
+
+        // note : for the combined case
+        TH1F * combined_h1D_ZDCNSVtxZ_ZDCNSTrig_MBDvtx;
+        TH1F * combined_h1D_ZDCNSVtxZ_ZDCNSTrig_MBDNSTrig;
+        TH1F * combined_h1D_ZDCNSVtxZ_ZDCNSTrig;
+        TH1F * combined_h1D_effi;
+        TH1F * combined_h1D_effi2;
+        TF1 *  combined_effi_fitting;
+        TF1 *  combined_effi_fitting2;
+        
+        pair<double, double> general_hist_range;
+        int general_Nbins;
+
+        map<int, int> LiveTrigger_map;
 
         TCanvas * c2;
-        void DrawTrialPlots(int index, int total_trials);
-        
-        map<int, TF1 *> fit_gaus_mapH;
-        map<int, TF1 *> fit_gaus_mapV;
-
-        map<int, TGraph *> Rchi2_TrialStepV;
-        map<int, TGraph *> WidthFitError_TrialStepV;
-        map<int, TGraph *> MeanFitError_TrialStepV;
-
-        map<int, TGraph *> Rchi2_TrialStepH;
-        map<int, TGraph *> WidthFitError_TrialStepH;
-        map<int, TGraph *> MeanFitError_TrialStepH;
+        TCanvas * c3;
 
         vector<string> color_code = {"#167288", "#8cdaec", "#b45248", "#d48c84", "#a89a49", "#d6cfa2", "#3cb464", "#9bddb1", "#643c6a", "#836394"};
     

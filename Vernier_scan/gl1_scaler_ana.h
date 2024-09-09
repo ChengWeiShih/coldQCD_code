@@ -115,8 +115,10 @@ class gl1_scaler_ana
         int bunchnumber;
         long long GTMBusyVector_Decimal;
         vector<int> *live_trigger_vec;
+        long long LiveTrigger_Decimal;
         map<int, int> live_trigger_map;
         double mbd_z_vtx;
+        double zdc_z_vtx;
 
         long long GL1Scalers_clock_raw; // note : 0
         long long GL1Scalers_clock_live;
@@ -156,6 +158,7 @@ class gl1_scaler_ana
         const int width_range_time = 40; // note : unit, second, this is for the display
         const int MBDNS_inclusive_ID = 10; // note : this is the id of the trigger
         const int MBDNS_30cm_ID = 13;     // note : this is the id of the trigger
+        const int ZDCNS_inclusive_ID = 3; // note : this is the id of the trigger
 
         int global_ana_counting = 0;
 
@@ -169,7 +172,8 @@ class gl1_scaler_ana
         map<int, vector<long long>> time_MBDNS_raw_counting; // note : the MBDNS counting in every second, the second is given by the GL1 clock
         map<int, pair<int, int>>    time_MBDNS_30cm_raw_counting_pair;
         map<int, vector<double>>    time_MBDNS_zvtx; // note : this one keeps the MBDNS zvtx readings in every second, every second has one vector
-        
+        map<int, vector<double>>    time_ZDCNS_zvtx; // note : this one keeps the ZDCNS zvtx readings in every second, every second has one vector
+        map<int, vector<long long>>     time_LiveTrigger_Decimal; // note : this one keeps the LiveTrigger readings in every second, every second has one vector
         map<int, pair<long long, long long>> time_GL1Scalers_range; // note : the range of every second
 
         // note : the copied one, for switch
