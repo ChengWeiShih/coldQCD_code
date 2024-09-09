@@ -192,7 +192,7 @@ MBD_zvtx_effi(MBD_zvtx_effi_in)
         fit_vecV.back() -> SetLineWidth(3); 
         fit_vecV.back() -> SetLineStyle(7);
 
-        h1D_detectorNS_vertexZ_vecV.push_back(new TH1F("", ";Reco. Z vertex [cm]; Entry", 100, -300, 300));
+        h1D_detectorNS_vertexZ_vecV.push_back(new TH1F("", ";Reco. Z vertex [cm]; Entries", 100, -300, 300));
         h1D_detectorNS_vertexZ_vecV.back() -> GetXaxis() -> SetNdivisions(505);
 
         h1D_detectorNS_vertexZ_postCorr_vecV.push_back(new TH1F(
@@ -229,7 +229,7 @@ MBD_zvtx_effi(MBD_zvtx_effi_in)
         fit_vecH.back() -> SetLineWidth(3);
         fit_vecH.back() -> SetLineStyle(7);
 
-        h1D_detectorNS_vertexZ_vecH.push_back(new TH1F("", ";Reco. Z vertex [cm]; Entry", 100, -300, 300));
+        h1D_detectorNS_vertexZ_vecH.push_back(new TH1F("", ";Reco. Z vertex [cm]; Entries", 100, -300, 300));
         h1D_detectorNS_vertexZ_vecH.back() -> GetXaxis() -> SetNdivisions(505);
 
         h1D_detectorNS_vertexZ_postCorr_vecH.push_back(new TH1F(

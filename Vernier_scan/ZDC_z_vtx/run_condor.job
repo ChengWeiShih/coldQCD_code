@@ -1,0 +1,14 @@
+Universe           = vanilla
+Initialdir         = /sphenix/user/ChengWei/coldQCD_code/Vernier_scan/ZDC_z_vtx
+Executable         = run_job.sh
+PeriodicHold       = (NumJobStarts>=1 && JobStatus == 1)
+concurrency_limits = CONCURRENCY_LIMIT_DEFAULT:100
+request_memory     = 4GB
+Priority           = 20
+job_lease_duration = 86400
+output_directory   = /sphenix/tg/tg01/coldqcd/cwshih/test/run_51195/from_Chris_mbdZ/ntuple_file_waveform/quick_check
+Output             = $(output_directory)/condor_$(process).out
+Error              = $(output_directory)/condor_$(process).err
+Log                = $(output_directory)/condor_$(process).log
+Arguments          = "$(process)"
+Queue 1
