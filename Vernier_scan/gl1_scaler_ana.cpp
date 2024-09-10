@@ -330,6 +330,21 @@ void gl1_scaler_ana::SetDetectorName(string detector_name) {
     }
 }
 
+void gl1_scaler_ana::SetMBDvtxZEffiFunc(TF1* MBD_vtxZ_effi_func_in) 
+{
+    MBD_vtxZ_effi_func = MBD_vtxZ_effi_func_in;
+
+    if (MBD_vtxZ_effi_func != nullptr)
+    {
+        cout<<"equation received, N parameters : "<<MBD_vtxZ_effi_func->GetNpar()<<endl;
+        for (int i = 0; i < MBD_vtxZ_effi_func->GetNpar(); i++)
+        {
+            cout<<"parameter "<<i<<" : "<<MBD_vtxZ_effi_func->GetParameter(i)<<endl;
+        }
+    }
+
+}
+
 void gl1_scaler_ana::PrepareRate(string input_file_directory)
 {
     if (input_file_directory == "null")
@@ -1116,8 +1131,8 @@ void gl1_scaler_ana::PrepareMBDvtxZEffi(
     vector<double> &detectorNS_zvtx_effi_correction_All
 )
 {   
-    if (h1D_detectorNS_vertexZ_vecAll.size() != detectorNS_zvtx_effi_correction_All.size()){
-        cout<<"Error : h1D_h1D_detectorNS_vertexZ_vecAll.size() != detectorNS_zvtx_effi_correction_All.size()"<<endl;
+    if (h1D_detectorNS_vertexZ_vecAll.size() != h1D_detectorNS_vertexZ_postCorr_vecAll.size()){
+        cout<<"Error : h1D_detectorNS_vertexZ_vecAll.size() != h1D_detectorNS_vertexZ_postCorr_vecAll.size()"<<endl;
         exit(1);
     }
 

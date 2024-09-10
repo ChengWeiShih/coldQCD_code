@@ -49,7 +49,7 @@ class gl1_scaler_ana
         std::pair<TGraphErrors *, TGraphErrors *> CombineMacro(string detector_name, bool only_raw_rate_tag_in = false);
         void SetNcollision_corr(bool NCollision_corr_in) {NCollision_corr = NCollision_corr_in;}
         void SetBeamIntensity_corr(bool beam_intensity_corr_in) {beam_intensity_corr = beam_intensity_corr_in;}
-        void SetMBDvtxZEffiFunc(TF1* MBD_vtxZ_effi_func_in) {MBD_vtxZ_effi_func = MBD_vtxZ_effi_func_in;};
+        void SetMBDvtxZEffiFunc(TF1* MBD_vtxZ_effi_func_in);
         void PrepareData();
         void CombineData(); // note : combine BPM and detector rate
         virtual void DrawPlots();

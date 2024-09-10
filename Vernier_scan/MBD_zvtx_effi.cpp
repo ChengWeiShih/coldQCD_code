@@ -173,6 +173,7 @@ general_Nbins(100)
     effi_fitting_vecH["h1D_MBD_effi_vec"] = vector<TF1 *>(); effi_fitting_vecH["h1D_MBD_effi_vec"].clear();
     effi_fitting_vecH["h1D_MBD_effi_vec2"] = vector<TF1 *>(); effi_fitting_vecH["h1D_MBD_effi_vec2"].clear();
 
+    // todo : if the efficiency function is different, we need to check GetEffiFitFuncSeparate
     for (int i = 0; i < range_t_V.size(); i++)
     {
         effi_fitting_vecV["h1D_MBD_effi_vec"].push_back(new TF1(Form("MBDEffi_%d",i),gaus_func,general_hist_range.first, general_hist_range.second,4));
@@ -411,17 +412,27 @@ vector<TF1 *> MBD_zvtx_effi::GetEffiFitFuncSeparate()
 {
     vector<TF1 *> output_vec; output_vec.clear();
     
+    // todo : if the efficiency function is different, we need to check here 
+
     for (int step : chosen_scan_steps) {
+        effi_fitting_vecV["h1D_MBD_effi_vec"][step] -> SetParameter(3, 0.); // note : for the case of gaus_func, set the offset to be zero
+        effi_fitting_vecV["h1D_MBD_effi_vec"][step] -> SetParameter(0, 1.); // note : for the case of gaus_func, set the size to be one
         output_vec.push_back(effi_fitting_vecV["h1D_MBD_effi_vec"][step]);
     }
     for (int step : chosen_scan_steps) {
+        effi_fitting_vecV["h1D_MBD_effi_vec2"][step] -> SetParameter(3, 0.); // note : for the case of gaus_func, set the offset to be zero
+        effi_fitting_vecV["h1D_MBD_effi_vec2"][step] -> SetParameter(0, 1.); // note : for the case of gaus_func, set the size to be one
         output_vec.push_back(effi_fitting_vecV["h1D_MBD_effi_vec2"][step]);
     }
     
     for (int step : chosen_scan_steps) {
+        effi_fitting_vecH["h1D_MBD_effi_vec"][step] -> SetParameter(3, 0.); // note : for the case of gaus_func, set the offset to be zero
+        effi_fitting_vecH["h1D_MBD_effi_vec"][step] -> SetParameter(0, 1.); // note : for the case of gaus_func, set the size to be one
         output_vec.push_back(effi_fitting_vecH["h1D_MBD_effi_vec"][step]);
     }
     for (int step : chosen_scan_steps) {
+        effi_fitting_vecH["h1D_MBD_effi_vec2"][step] -> SetParameter(3, 0.); // note : for the case of gaus_func, set the offset to be zero
+        effi_fitting_vecH["h1D_MBD_effi_vec2"][step] -> SetParameter(0, 1.); // note : for the case of gaus_func, set the size to be one
         output_vec.push_back(effi_fitting_vecH["h1D_MBD_effi_vec2"][step]);
     }
 
@@ -430,12 +441,22 @@ vector<TF1 *> MBD_zvtx_effi::GetEffiFitFuncSeparate()
 
 vector<TF1 *>MBD_zvtx_effi::GetEffiFitFuncComb()
 {
-    vector<TF1 *> output_vec = {
+    // todo : if the efficiency function is different, we need to check here 
+    combined_effi_fitting -> SetParameter(3, 0.); // note : for the case of gaus_func, set the offset to be zero
+    combined_effi_fitting -> SetParameter(0, 1.); // note : for the case of gaus_func, set the size to be one    
+
+    combined_effi_fitting2 -> SetParameter(3, 0.); // note : for the case of gaus_func, set the offset to be zero
+    combined_effi_fitting2 -> SetParameter(0, 1.); // note : for the case of gaus_func, set the size to be one
+
+    // vector<TF1 *> output_vec = {
+    //     combined_effi_fitting,
+    //     combined_effi_fitting2
+    // };
+
+    return {
         combined_effi_fitting,
         combined_effi_fitting2
     };
-
-    return output_vec;
 
 }
 

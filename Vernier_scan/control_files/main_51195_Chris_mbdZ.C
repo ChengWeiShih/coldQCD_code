@@ -61,11 +61,20 @@
 // }
 
 
-// #include "../gl1_scaler_ana.h"
-// R__LOAD_LIBRARY(../libgl1_scaler_ana.so)
+#include "../gl1_scaler_ana.h"
+R__LOAD_LIBRARY(../libgl1_scaler_ana.so)
 
-#include "../MBD_zvtx_effi.h"
-R__LOAD_LIBRARY(../libmbd_zvtx_effi.so)
+// #include "../MBD_zvtx_effi.h"
+// R__LOAD_LIBRARY(../libmbd_zvtx_effi.so)
+
+double gaus_func(double *x, double *par)
+{
+    // note : par[0] : size
+    // note : par[1] : mean
+    // note : par[2] : width
+    // note : par[3] : offset
+    return par[0] * TMath::Gaus(x[0],par[1],par[2]) + par[3];
+}
 
 int main_51195_Chris_mbdZ()
 {
@@ -112,43 +121,47 @@ int main_51195_Chris_mbdZ()
         {659, 774}
     };
 
-    // gl1_scaler_ana * MBDS_ana = new gl1_scaler_ana(
-    //     input_directory, 
-    //     input_filename, 
-    //     output_directory,
-    //     range_t_V,
-    //     range_t_H,
-    //     false, true, false
-    // );
-    // cout<<1111<<endl;
-    // MBDS_ana->PrepareRate();
-    // cout<<2222<<endl;
-    // MBDS_ana->OutputRawRate((input_directory + "/" + output_data_filename).c_str());
-    // MBDS_ana->PrepareRate((input_directory + "/" + output_data_filename).c_str());
-    // MBDS_ana->ImportCADReadings(CAD_reading_filename.c_str(), true);
-    // pair<TGraphErrors *, TGraphErrors *> MBDNS = MBDS_ana->CombineMacro("MBDNS", true);
+    TF1 * dummy_effi_func = new TF1("dummy_effi_func", gaus_func, -400, 400, 4);
+    dummy_effi_func -> SetParameters(1, 0, 172, 0);
 
-    MBD_zvtx_effi * MBDZ_ana = new MBD_zvtx_effi(
+    gl1_scaler_ana * MBDNS_ana_ttftt = new gl1_scaler_ana(
         input_directory, 
         input_filename, 
-        output_data_filename,
         output_directory,
         range_t_V,
-        range_t_H
+        range_t_H,
+        true, true, false, true, true
     );
+    // MBDNS_ana_ttftt->PrepareRate();
+    // MBDNS_ana_ttftt->OutputRawRate((input_directory + "/" + output_data_filename).c_str());
+    MBDNS_ana_ttftt->PrepareRate((input_directory + "/" + output_data_filename).c_str());
+    MBDNS_ana_ttftt->ImportCADReadings(CAD_reading_filename.c_str(), true);
+    MBDNS_ana_ttftt->SetMBDvtxZEffiFunc(dummy_effi_func);
+    pair<TGraphErrors *, TGraphErrors *> MBDNS = MBDNS_ana_ttftt->CombineMacro("MBDNS", false);
 
-    MBDZ_ana -> RunMacro();
-    MBDZ_ana -> DrawPlots();
+    // MBD_zvtx_effi * MBDZ_ana = new MBD_zvtx_effi(
+    //     input_directory, 
+    //     input_filename, 
+    //     output_data_filename,
+    //     output_directory,
+    //     range_t_V,
+    //     range_t_H
+    // );
 
-    vector<TF1 *> effi_fit_functions = MBDZ_ana -> GetEffiFitFuncSeparate();
-    for (TF1 * func : effi_fit_functions) {
-        cout<<func->GetName()<<" width : "<<func->GetParameter(2)<<endl;
-    }
+    // MBDZ_ana -> RunMacro();
+    // MBDZ_ana -> DrawPlots();
 
-    vector<TF1 *> effi_fit_functions_comb = MBDZ_ana -> GetEffiFitFuncComb();
-    for (TF1 * func : effi_fit_functions_comb) {
-        cout<<func->GetName()<<" width : "<<func->GetParameter(2)<<endl;
-    }
+    // vector<TF1 *> effi_fit_functions = MBDZ_ana -> GetEffiFitFuncSeparate();
+    // for (TF1 * func : effi_fit_functions) {
+    //     cout<<func->GetName()<<" width : "<<func->GetParameter(2)<<endl;
+    // }
+
+    // vector<TF1 *> effi_fit_functions_comb = MBDZ_ana -> GetEffiFitFuncComb();
+    // for (TF1 * func : effi_fit_functions_comb) {
+    //     cout<<func->GetName()<<" width : "<<func->GetParameter(2)<<endl;
+    // }
+
+
 
 
 
