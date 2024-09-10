@@ -138,6 +138,31 @@ void hist_bkgrm(TH1F * hist_in)
     }
 }
 
+pair<double, double> GetFitRangeHist(TH1F * hist_in)
+{
+    int peak_bin = hist_in -> GetMaximumBin(); // note : 1 ~ 16
+    if (peak_bin > 3 && peak_bin < 14) {return {3., 13.};}
+    else if (peak_bin < 4) {return {0., 10.};} // note : peak at bin 2, 3
+    else {return {10., 16.};} // note : peak at bin 14, 15
+}
+
+pair<double, double> GetNumZDCtime(TH1F * hist_in)
+{
+    int peak_bin = hist_in -> GetMaximumBin(); // note : 1 ~ 16
+    double numerator = 0; 
+    double denominator = 0;
+
+    for (int i = 0; i < 3; i++)
+    {
+        numerator += hist_in -> GetBinContent(peak_bin + i) * hist_in -> GetBinLowEdge(peak_bin + i);
+        denominator += hist_in -> GetBinContent(peak_bin + i);
+
+        if (peak_bin + i == hist_in -> GetNbinsX()) {break;}
+    }
+
+    return {numerator/denominator, denominator};
+}
+
 int quick_check(long long eventID, string input_full_directory = "/sphenix/tg/tg01/coldqcd/cwshih/test/run_51195/from_Chris_mbdZ/ntuple_file_waveform/ntuple_run51195_merged.root", string output_directory = "/sphenix/tg/tg01/coldqcd/cwshih/test/run_51195/from_Chris_mbdZ/ntuple_file_waveform/quick_check")
 {
     map<string, calo_struct> zdc_map;
@@ -265,16 +290,27 @@ int quick_check(long long eventID, string input_full_directory = "/sphenix/tg/tg
 
     c1 -> Print(Form("%s/ZDCNS_waveform.pdf(", output_directory.c_str()));
 
-    TH1F * ZDC_vtxZ = new TH1F("ZDC_vtxZ", "ZDC_vtxZ;ZDC_vtxZ [cm];Entries", 100, -500, 500);
+    TGaxis::SetMaxDigits(4);
 
+    TH1F * ZDC_vtxZ_fit = new TH1F("ZDC_vtxZ_fit", "ZDC_vtxZ_fit;ZDC_vtxZ_fit [cm];Entries", 100, -500, 500);
+    ZDC_vtxZ_fit -> GetXaxis() -> SetNdivisions(505);
+    TH1F * ZDC_vtxZ_num = new TH1F("ZDC_vtxZ_num", "ZDC_vtxZ_num;ZDC_vtxZ_num [cm];Entries", 100, -500, 500);
+    ZDC_vtxZ_num -> GetXaxis() -> SetNdivisions(505);
+    TH1F * ZDC_vtxZ = new TH1F("ZDC_vtxZ", "ZDC_vtxZ;ZDC_vtxZ [cm];Entries", 100, -500, 500);
+    ZDC_vtxZ -> GetXaxis() -> SetNdivisions(505);
     TH2F * vtx_correlation = new TH2F("",";MBD_vtxZ [cm];ZDC_vtxZ [cm]",150,-300,300,150,-300,300);
+    vtx_correlation -> GetXaxis() -> SetNdivisions(505);
 
     TFile * file_out = new TFile(Form("%s/ZDC_vtxZ.root", output_directory.c_str()), "recreate");
     TTree * tree_out = new TTree("tree", "tree");
+    double ZDC_vtxZ_num_out; 
+    double ZDC_vtxZ_fit_out;
     double ZDC_vtxZ_out;
     double mbd_vtxZ_out;
     int Ngood_waveform_S_out;
     int Ngood_waveform_N_out;
+    tree_out -> Branch("ZDC_vtxZ_num", &ZDC_vtxZ_num_out);
+    tree_out -> Branch("ZDC_vtxZ_fit", &ZDC_vtxZ_fit_out);
     tree_out -> Branch("ZDC_vtxZ", &ZDC_vtxZ_out);
     tree_out -> Branch("mbd_vtxZ", &mbd_vtxZ_out);
     tree_out -> Branch("Ngood_waveform_S", &Ngood_waveform_S_out);
@@ -316,23 +352,26 @@ int quick_check(long long eventID, string input_full_directory = "/sphenix/tg/tg
                 zdc.second.h1_waveform_StdDev->Fill(hist_stddev(zdc.second.hist));
 
 
-                // zdc.second.fit->SetLineColor(kRed);
-                // zdc.second.fit->SetParameters(
-                //     zdc.second.hist->GetBinContent(zdc.second.hist->GetMaximumBin()),
-                //     zdc.second.hist->GetMaximumBin(),
-                //     0.3,
-                //     zdc.second.hist->GetBinContent(zdc.second.hist->GetMinimumBin())
-                // );
+                zdc.second.fit->SetLineColor(kRed);
+                zdc.second.fit->SetParameters(
+                    zdc.second.hist->GetBinContent(zdc.second.hist->GetMaximumBin()) - zdc.second.hist->GetBinContent(zdc.second.hist->GetMinimumBin()),
+                    zdc.second.hist->GetMaximumBin(),
+                    0.3,
+                    zdc.second.hist->GetBinContent(zdc.second.hist->GetMinimumBin())
+                );
+                zdc.second.fit->SetParLimits(0, 0, 10000);
 
-                // zdc.second.hist->Fit(zdc.second.fit, "NQ");
+                zdc.second.hist->Fit(zdc.second.fit, "NQ","", GetFitRangeHist(zdc.second.hist).first, GetFitRangeHist(zdc.second.hist).second);
 
                 c1 -> cd(zdc.second.index+1);
                 zdc.second.hist->Draw("hist");
                 coord_line -> DrawLine(0, zdc.second.hist->GetBinContent(zdc.second.hist->GetMaximumBin())/2., 16, zdc.second.hist->GetBinContent(zdc.second.hist->GetMaximumBin())/2.);
-                // zdc.second.fit->Draw("l same");
+                zdc.second.fit->Draw("l same");
 
                 draw_text -> DrawLatex(0.2, 0.87, Form("eID: %d", i));
                 draw_text -> DrawLatex(0.2, 0.84, Form("StdDev: %.2f", vector_stddev(*zdc.second.waveform)));
+                draw_text -> DrawLatex(0.2, 0.81, Form("Ngroup: %.0f", Ngroup_info[0]));
+                draw_text -> DrawLatex(0.2, 0.78, Form("fit PeakPos: %.2f", zdc.second.fit->GetParameter(1)));
             }
 
             if (i % 1000 == 0) {c1 -> Print(Form("%s/ZDCNS_waveform.pdf", output_directory.c_str()));}
@@ -349,33 +388,67 @@ int quick_check(long long eventID, string input_full_directory = "/sphenix/tg/tg
                 double T_numerator_N = 0;
                 double T_denominator_N = 0;
 
+                double T_numerator_fit_S = 0;
+                double T_denominator_fit_S = 0;
+                double T_numerator_fit_N = 0;
+                double T_denominator_fit_N = 0;
+
+                double T_numerator_num_S = 0;
+                double T_denominator_num_S = 0;
+                double T_numerator_num_N = 0;
+                double T_denominator_num_N = 0;
+
                 for (auto &zdc : zdc_map) {
                     if (zdc.first.find("zdcS") != string::npos && zdc.second.status == 1) {
                         T_numerator_S += zdc.second.peak_pos * zdc.second.peak_height;
                         T_denominator_S += zdc.second.peak_height;
+
+                        T_numerator_fit_S += zdc.second.fit->GetParameter(1) * (zdc.second.fit->GetParameter(0) - zdc.second.fit->GetParameter(3));
+                        T_denominator_fit_S += (zdc.second.fit->GetParameter(0) - zdc.second.fit->GetParameter(3));
+
+                        T_numerator_num_S += GetNumZDCtime(zdc.second.hist).first * GetNumZDCtime(zdc.second.hist).second;
+                        T_denominator_num_S += GetNumZDCtime(zdc.second.hist).second;   
+
                     }
                     if (zdc.first.find("zdcN") != string::npos && zdc.second.status == 1) {
                         T_numerator_N += zdc.second.peak_pos * zdc.second.peak_height;
                         T_denominator_N += zdc.second.peak_height;
+
+                        T_numerator_fit_N += zdc.second.fit->GetParameter(1) * (zdc.second.fit->GetParameter(0) - zdc.second.fit->GetParameter(3));
+                        T_denominator_fit_N += (zdc.second.fit->GetParameter(0) - zdc.second.fit->GetParameter(3));
+
+                        T_numerator_num_N += GetNumZDCtime(zdc.second.hist).first * GetNumZDCtime(zdc.second.hist).second;
+                        T_denominator_num_N += GetNumZDCtime(zdc.second.hist).second;
                     }
                 }
 
-                double T_final_S = ((T_numerator_S / T_denominator_S) - 1) - (T_numerator_N / T_denominator_N);
+                double sample_offset = 1; // todo : the -1 is for the shift for the run 51195
+                double T_final_S = ((T_numerator_S / T_denominator_S) - sample_offset) - (T_numerator_N / T_denominator_N);
+                double T_final_fit_S = ((T_numerator_fit_S / T_denominator_fit_S) - sample_offset) - (T_numerator_fit_N / T_denominator_fit_N);
+                double T_final_num_S = ((T_numerator_num_S / T_denominator_num_S) - sample_offset) - (T_numerator_num_N / T_denominator_num_N);
+
                 // note:        cm/s           s                                                       
                 float TSAMPLE = 1.0 / ( (9.4e+6) * 6 ); // note : the time span of each sample
                 float z_ZDC = ((3e+10) * ( T_final_S ) * TSAMPLE) / 2.0;
+                float z_ZDC_fit = ((3e+10) * ( T_final_fit_S ) * TSAMPLE) / 2.0;
+                float z_ZDC_num = ((3e+10) * ( T_final_num_S ) * TSAMPLE) / 2.0;
+
+                ZDC_vtxZ_num -> Fill(z_ZDC_num);
+                ZDC_vtxZ_fit -> Fill(z_ZDC_fit);
                 if (T_final_S != 0){
                     ZDC_vtxZ -> Fill(z_ZDC);
+                }
 
-                    if (mbd_z_vtx != -999){
-                        vtx_correlation -> Fill(mbd_z_vtx, z_ZDC);
-                        
-                        ZDC_vtxZ_out = z_ZDC;
-                        mbd_vtxZ_out = mbd_z_vtx;
-                        Ngood_waveform_S_out = (zdc_map["zdcS1"].status + zdc_map["zdcS2"].status + zdc_map["zdcS3"].status);
-                        Ngood_waveform_N_out = (zdc_map["zdcN1"].status + zdc_map["zdcN2"].status + zdc_map["zdcN3"].status);
-                        tree_out -> Fill();
-                    }
+                if (mbd_z_vtx != -999){
+                    vtx_correlation -> Fill(mbd_z_vtx, z_ZDC);
+                    
+                    ZDC_vtxZ_num_out = z_ZDC_num;
+                    ZDC_vtxZ_fit_out = z_ZDC_fit;
+                    ZDC_vtxZ_out = z_ZDC;
+                    mbd_vtxZ_out = mbd_z_vtx;
+                    Ngood_waveform_S_out = (zdc_map["zdcS1"].status + zdc_map["zdcS2"].status + zdc_map["zdcS3"].status);
+                    Ngood_waveform_N_out = (zdc_map["zdcN1"].status + zdc_map["zdcN2"].status + zdc_map["zdcN3"].status);
+                    tree_out -> Fill();
                 }
                 
             }
