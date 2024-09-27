@@ -7,7 +7,8 @@ struct calo_struct{
     TH1F * hist;
     TF1 * fit;
     TH1F * h1_waveform_peak;
-    TH1F * h1_waveform_StdDev;
+    TH1F * h1_waveform_StdDev; // note : this is in height
+    TH1F * h1_waveform_fit_width; // note : this is in width
     int status;
     int Ngroup;
     double peak_pos;
@@ -21,6 +22,17 @@ double land_offset(double *x, double *par)
     // note : par[2] : width
     // note : par[3] : offset
     return (par[0]/0.178854) * TMath::Landau(x[0], par[1], par[2]) + par[3];
+}
+
+double charge_discharge_func(double *x, double *par)
+{
+    // note : par[0]: offset
+    // note : par[1]: charge time
+    // note : par[2]: charge tau
+    // note : par[3]: discharge tau
+    // note : par[4]: amplitude
+
+    return par[0] + ( 1-TMath::Exp( -(x[0]-par[1])/par[2] ) ) * TMath::Exp( -(x[0]-par[1])/par[3] ) * par[4];
 }
 
 double vector_stddev (vector <double> input_vector){
@@ -48,10 +60,36 @@ double hist_stddev (TH1F * hist_in)
     return vector_stddev(hist_content);
 }
 
-vector<double> find_Ngroup(TH1F * hist_in)
+double hist_bkgrm(TH1F * hist_in)
 {
+    double baseline_left = 0.;
+    double baseline_right = 0.;
+
+    for(int s = 0; s < 3; s++) { baseline_left += hist_in -> GetBinContent(s+1); }
+    for (int s = hist_in -> GetNbinsX()-3; s < hist_in -> GetNbinsX(); s++) { baseline_right += hist_in -> GetBinContent(s+1); }
+
+    baseline_left /= 3.;
+    baseline_right /=3.;
+    double baseline = (baseline_left < baseline_right) ? baseline_left : baseline_right;
+
+    // for(int s = 0; s < hist_in -> GetNbinsX(); s++) { 
+        
+    //     if (hist_in -> GetBinContent(s+1) < baseline) {hist_in -> SetBinContent(s+1, 0.); continue; }
+
+    //     hist_in -> SetBinContent(s+1, hist_in -> GetBinContent(s+1) - baseline); 
+    // }
+
+    return baseline;
+}
+
+vector<double> find_Ngroup(TH1F * hist_in, double baseline)
+{
+    // double baseline = hist_bkgrm(hist_in);
+
     double Highest_bin_Content  = hist_in -> GetBinContent(hist_in -> GetMaximumBin());
     double Highest_bin_Center   = hist_in -> GetBinCenter(hist_in -> GetMaximumBin());
+
+    double threshold_cut = (Highest_bin_Content + baseline) / 2.;
 
     int group_Nbin = 0;
     int peak_group_ID;
@@ -64,7 +102,7 @@ vector<double> find_Ngroup(TH1F * hist_in)
 
     for (int i = 0; i < hist_in -> GetNbinsX(); i++){
         // todo : the background rejection is here : Highest_bin_Content/2. for the time being
-        double bin_content = ( hist_in -> GetBinContent(i+1) <= Highest_bin_Content/2.) ? 0. : ( hist_in -> GetBinContent(i+1) - Highest_bin_Content/2. );
+        double bin_content = ( hist_in -> GetBinContent(i+1) <= threshold_cut) ? 0. : ( hist_in -> GetBinContent(i+1) - threshold_cut );
 
         if (bin_content != 0){
             
@@ -118,25 +156,7 @@ vector<double> find_Ngroup(TH1F * hist_in)
     return {double(group_Nbin_vec.size()), peak_group_ratio, group_widthL_vec[peak_group_ID], group_widthR_vec[peak_group_ID]};
 }
 
-void hist_bkgrm(TH1F * hist_in)
-{
-    double baseline_left = 0.;
-    double baseline_right = 0.;
 
-    for(int s = 0; s < 3; s++) { baseline_left += hist_in -> GetBinContent(s+1); }
-    for (int s = hist_in -> GetNbinsX()-3; s < hist_in -> GetNbinsX(); s++) { baseline_right += hist_in -> GetBinContent(s+1); }
-
-    baseline_left /= 3.;
-    baseline_right /=3.;
-    double baseline = (baseline_left < baseline_right) ? baseline_left : baseline_right;
-
-    for(int s = 0; s < hist_in -> GetNbinsX(); s++) { 
-        
-        if (hist_in -> GetBinContent(s+1) < baseline) {hist_in -> SetBinContent(s+1, 0.); continue; }
-
-        hist_in -> SetBinContent(s+1, hist_in -> GetBinContent(s+1) - baseline); 
-    }
-}
 
 pair<double, double> GetFitRangeHist(TH1F * hist_in)
 {
@@ -174,6 +194,7 @@ int quick_check(long long eventID, string input_full_directory = "/sphenix/tg/tg
         .fit = new TF1("",land_offset, 0, 16, 4),
         .h1_waveform_peak = new TH1F("",";zdcS1_PeakSample;Entries",16,0,16),
         .h1_waveform_StdDev = new TH1F("",";zdcS1_SetDeV;Entries",100,0,150),
+        .h1_waveform_fit_width = new TH1F("",";zdcS1_FitWidth;Entries",100,0,5),
         .status = 0,
         .Ngroup = -999,
         .peak_pos = -999,
@@ -187,6 +208,7 @@ int quick_check(long long eventID, string input_full_directory = "/sphenix/tg/tg
         .fit = new TF1("",land_offset, 0, 16, 4),
         .h1_waveform_peak = new TH1F("",";zdcS2_PeakSample;Entries",16,0,16),
         .h1_waveform_StdDev = new TH1F("",";zdcS2_SetDeV;Entries",100,0,150),
+        .h1_waveform_fit_width = new TH1F("",";zdcS2_FitWidth;Entries",100,0,5),
         .status = 0,
         .Ngroup = -999,
         .peak_pos = -999,
@@ -200,6 +222,7 @@ int quick_check(long long eventID, string input_full_directory = "/sphenix/tg/tg
         .fit = new TF1("",land_offset, 0, 16, 4),
         .h1_waveform_peak = new TH1F("",";zdcS3_PeakSample;Entries",16,0,16),
         .h1_waveform_StdDev = new TH1F("",";zdcS3_SetDeV;Entries",100,0,150),
+        .h1_waveform_fit_width = new TH1F("",";zdcS3_FitWidth;Entries",100,0,5),
         .status = 0,
         .Ngroup = -999,
         .peak_pos = -999,
@@ -213,6 +236,7 @@ int quick_check(long long eventID, string input_full_directory = "/sphenix/tg/tg
         .fit = new TF1("",land_offset, 0, 16, 4),
         .h1_waveform_peak = new TH1F("",";zdcN1_PeakSample;Entries",16,0,16),
         .h1_waveform_StdDev = new TH1F("",";zdcN1_SetDeV;Entries",100,0,150),
+        .h1_waveform_fit_width = new TH1F("",";zdcN1_FitWidth;Entries",100,0,5),
         .status = 0,
         .Ngroup = -999,
         .peak_pos = -999,
@@ -226,6 +250,7 @@ int quick_check(long long eventID, string input_full_directory = "/sphenix/tg/tg
         .fit = new TF1("",land_offset, 0, 16, 4),
         .h1_waveform_peak = new TH1F("",";zdcN2_PeakSample;Entries",16,0,16),
         .h1_waveform_StdDev = new TH1F("",";zdcN2_SetDeV;Entries",100,0,150),
+        .h1_waveform_fit_width = new TH1F("",";zdcN2_FitWidth;Entries",100,0,5),
         .status = 0,
         .Ngroup = -999,
         .peak_pos = -999,
@@ -239,6 +264,7 @@ int quick_check(long long eventID, string input_full_directory = "/sphenix/tg/tg
         .fit = new TF1("",land_offset, 0, 16, 4),
         .h1_waveform_peak = new TH1F("",";zdcN3_PeakSample;Entries",16,0,16),
         .h1_waveform_StdDev = new TH1F("",";zdcN3_SetDeV;Entries",100,0,150),
+        .h1_waveform_fit_width = new TH1F("",";zdcN3_FitWidth;Entries",100,0,5),
         .status = 0,
         .Ngroup = -999,
         .peak_pos = -999,
@@ -246,6 +272,7 @@ int quick_check(long long eventID, string input_full_directory = "/sphenix/tg/tg
     };
     
     int ZDCNS_trigger_ID = 3;
+    int MBDNS_trigger_ID = 10;
 
 
     TLatex * draw_text = new TLatex();
@@ -301,6 +328,13 @@ int quick_check(long long eventID, string input_full_directory = "/sphenix/tg/tg
     TH2F * vtx_correlation = new TH2F("",";MBD_vtxZ [cm];ZDC_vtxZ [cm]",150,-300,300,150,-300,300);
     vtx_correlation -> GetXaxis() -> SetNdivisions(505);
 
+    TH1F * MBD_vtxZ_dist_inclusive = new TH1F("MBD_vtxZ_dist_inclusive", "MBD_vtxZ_dist_inclusive;MBD_vtxZ [cm];Entries", 100, -500, 500);
+    MBD_vtxZ_dist_inclusive -> SetLineColor(kRed);
+    MBD_vtxZ_dist_inclusive -> GetXaxis() -> SetNdivisions(505);
+    TH1F * MBD_vtxZ_dist_ZDCNSTrig = new TH1F("MBD_vtxZ_dist_ZDCNSTrig", "MBD_vtxZ_dist_ZDCNSTrig;MBD_vtxZ [cm];Entries", 100, -500, 500);
+    MBD_vtxZ_dist_ZDCNSTrig -> SetLineColor(kBlue);
+    MBD_vtxZ_dist_ZDCNSTrig -> GetXaxis() -> SetNdivisions(505);
+
     TFile * file_out = new TFile(Form("%s/ZDC_vtxZ.root", output_directory.c_str()), "recreate");
     TTree * tree_out = new TTree("tree", "tree");
     double ZDC_vtxZ_num_out; 
@@ -316,6 +350,10 @@ int quick_check(long long eventID, string input_full_directory = "/sphenix/tg/tg
     tree_out -> Branch("Ngood_waveform_S", &Ngood_waveform_S_out);
     tree_out -> Branch("Ngood_waveform_N", &Ngood_waveform_N_out);
 
+    TLegend * legend = new TLegend(0.45,0.8,0.70,0.9);
+    // legend -> SetMargin(0);
+    legend->SetTextSize(0.03);
+
     map<int,int> live_trigger_map_evt;
     for (int i = 0; i < tree->GetEntries(); i++)
     {
@@ -328,22 +366,30 @@ int quick_check(long long eventID, string input_full_directory = "/sphenix/tg/tg
             live_trigger_map_evt[live_trigger_vec->at(i)] = 1;
         }
 
-        if (live_trigger_map_evt.find(ZDCNS_trigger_ID) != live_trigger_map_evt.end()) {
+        if (live_trigger_map_evt.find(MBDNS_trigger_ID) != live_trigger_map_evt.end() && mbd_z_vtx != -999){
+            MBD_vtxZ_dist_inclusive -> Fill(mbd_z_vtx);
+        }
+
+        if (live_trigger_map_evt.find(ZDCNS_trigger_ID) != live_trigger_map_evt.end() && mbd_z_vtx != -999) {
             // cout<<"eID : "<<i<<" has ZDCNS trigger"<<endl;
+
+            MBD_vtxZ_dist_ZDCNSTrig -> Fill(mbd_z_vtx);
+
             for (auto &zdc : zdc_map) {
                 for (int i = 0; i < zdc.second.waveform->size(); i++) {
                     zdc.second.hist->SetBinContent(i+1, zdc.second.waveform->at(i));
                 }
 
                 zdc.second.hist->SetTitle(Form(";%s;A. U.",zdc.second.name.c_str()));
-                hist_bkgrm(zdc.second.hist);
-                zdc.second.hist->SetMinimum(0);
-                vector<double> Ngroup_info = find_Ngroup(zdc.second.hist);
+                double baseline = hist_bkgrm(zdc.second.hist);
+                // zdc.second.hist->SetMinimum( zdc.second.hist->GetBinContent(zdc.second.hist->GetMinimumBin()) * 0.95 );
+                zdc.second.hist->SetMaximum( zdc.second.hist->GetBinContent(zdc.second.hist->GetMaximumBin()) + (zdc.second.hist->GetBinContent(zdc.second.hist->GetMaximumBin()) - baseline) * 1 );
+                vector<double> Ngroup_info = find_Ngroup(zdc.second.hist, baseline);
 
                 zdc.second.Ngroup = Ngroup_info[0];
                 zdc.second.status = (Ngroup_info[0] == 1) ? 1 : 0;
                 zdc.second.peak_pos = zdc.second.hist -> GetMaximumBin();
-                zdc.second.peak_height = zdc.second.hist->GetBinContent(zdc.second.hist->GetMaximumBin());
+                zdc.second.peak_height = zdc.second.hist->GetBinContent(zdc.second.hist->GetMaximumBin()) - baseline;
 
                 if (Ngroup_info[0] == 1){
                     zdc.second.h1_waveform_peak->Fill(zdc.second.hist->GetMaximumBin()-1);
@@ -354,27 +400,37 @@ int quick_check(long long eventID, string input_full_directory = "/sphenix/tg/tg
 
                 zdc.second.fit->SetLineColor(kRed);
                 zdc.second.fit->SetParameters(
-                    zdc.second.hist->GetBinContent(zdc.second.hist->GetMaximumBin()) - zdc.second.hist->GetBinContent(zdc.second.hist->GetMinimumBin()),
+                    zdc.second.hist->GetBinContent(zdc.second.hist->GetMaximumBin()) - baseline,
                     zdc.second.hist->GetMaximumBin(),
                     0.3,
-                    zdc.second.hist->GetBinContent(zdc.second.hist->GetMinimumBin())
+                    baseline
                 );
-                zdc.second.fit->SetParLimits(0, 0, 10000);
+                zdc.second.fit->SetParLimits(0, 0, (zdc.second.hist->GetBinContent(zdc.second.hist->GetMaximumBin()) - baseline) * 1.5); // note : the size of the landau
+                zdc.second.fit->SetParLimits(1, Ngroup_info[2], Ngroup_info[3]); // note : the mpv of the landau
+                zdc.second.fit->SetParLimits(3,   - 20, baseline + 20); // note : the offset of the landau
 
-                zdc.second.hist->Fit(zdc.second.fit, "NQ","", GetFitRangeHist(zdc.second.hist).first, GetFitRangeHist(zdc.second.hist).second);
+                zdc.second.hist->Fit(zdc.second.fit, "NQ","", zdc.second.hist->GetMaximumBin()-3, zdc.second.hist->GetMaximumBin()+4);
+                zdc.second.h1_waveform_fit_width->Fill(zdc.second.fit->GetParameter(2));
+
 
                 c1 -> cd(zdc.second.index+1);
                 zdc.second.hist->Draw("hist");
-                coord_line -> DrawLine(0, zdc.second.hist->GetBinContent(zdc.second.hist->GetMaximumBin())/2., 16, zdc.second.hist->GetBinContent(zdc.second.hist->GetMaximumBin())/2.);
+                coord_line -> DrawLine(0, (zdc.second.hist->GetBinContent(zdc.second.hist->GetMaximumBin()) + baseline)/2., 16, (zdc.second.hist->GetBinContent(zdc.second.hist->GetMaximumBin()) + baseline)/2.);
                 zdc.second.fit->Draw("l same");
 
                 draw_text -> DrawLatex(0.2, 0.87, Form("eID: %d", i));
                 draw_text -> DrawLatex(0.2, 0.84, Form("StdDev: %.2f", vector_stddev(*zdc.second.waveform)));
                 draw_text -> DrawLatex(0.2, 0.81, Form("Ngroup: %.0f", Ngroup_info[0]));
                 draw_text -> DrawLatex(0.2, 0.78, Form("fit PeakPos: %.2f", zdc.second.fit->GetParameter(1)));
+                draw_text -> DrawLatex(0.2, 0.75, Form("fit LandSize: %.2f", zdc.second.fit->GetParameter(0)));
+                draw_text -> DrawLatex(0.2, 0.72, Form("mpv fit limits: %.2f ~ %.2f", Ngroup_info[2], Ngroup_info[3]));
             }
 
-            if (i % 1000 == 0) {c1 -> Print(Form("%s/ZDCNS_waveform.pdf", output_directory.c_str()));}
+            if (i % 1000 == 0) {
+                c1 -> Print(Form("%s/ZDCNS_waveform.pdf", output_directory.c_str()));
+                c1 -> Clear();
+                c1 -> Divide(3,2);
+            }
 
 
 
@@ -440,7 +496,7 @@ int quick_check(long long eventID, string input_full_directory = "/sphenix/tg/tg
                 }
 
                 if (mbd_z_vtx != -999){
-                    vtx_correlation -> Fill(mbd_z_vtx, z_ZDC);
+                    vtx_correlation -> Fill(mbd_z_vtx, z_ZDC_fit);
                     
                     ZDC_vtxZ_num_out = z_ZDC_num;
                     ZDC_vtxZ_fit_out = z_ZDC_fit;
@@ -486,6 +542,14 @@ int quick_check(long long eventID, string input_full_directory = "/sphenix/tg/tg
     }
     c1 -> Print(Form("%s/ZDC_waveform_StdDev.pdf", output_directory.c_str()));
 
+    c1 -> cd();
+    for (auto &zdc : zdc_map)
+    {
+        c1 -> cd(zdc.second.index+1);
+        zdc.second.h1_waveform_fit_width->Draw("hist");
+    }
+    c1 -> Print(Form("%s/ZDC_waveform_fit_width.pdf", output_directory.c_str()));
+
 
     TCanvas * c2 = new TCanvas("","",950, 800);
     c2 -> cd();
@@ -496,6 +560,16 @@ int quick_check(long long eventID, string input_full_directory = "/sphenix/tg/tg
     c2 -> cd();
     vtx_correlation -> Draw("colz0");
     c2 -> Print(Form("%s/vtx_correlation.pdf", output_directory.c_str()));
+    c2 -> Clear();
+
+    c2 -> cd();
+    MBD_vtxZ_dist_inclusive -> Scale(1./MBD_vtxZ_dist_inclusive->Integral(-1,-1));
+    MBD_vtxZ_dist_ZDCNSTrig -> Scale(1./MBD_vtxZ_dist_ZDCNSTrig->Integral(-1,-1));
+    MBD_vtxZ_dist_inclusive -> SetMaximum(1.5 * max(MBD_vtxZ_dist_inclusive->GetBinContent(MBD_vtxZ_dist_inclusive->GetMaximumBin()), MBD_vtxZ_dist_ZDCNSTrig->GetBinContent(MBD_vtxZ_dist_ZDCNSTrig->GetMaximumBin())));
+    MBD_vtxZ_dist_inclusive -> SetMinimum(0);
+    MBD_vtxZ_dist_inclusive -> Draw("hist");
+    MBD_vtxZ_dist_ZDCNSTrig -> Draw("hist same");
+    c2 -> Print(Form("%s/MBD_vtxZ_dist_comp.pdf", output_directory.c_str()));
     c2 -> Clear();
 
     // tree -> GetEntry(eventID);

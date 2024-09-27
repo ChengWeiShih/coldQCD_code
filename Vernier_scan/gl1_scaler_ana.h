@@ -41,12 +41,15 @@ class gl1_scaler_ana
             bool use_set_pos_in = false,
             bool MBD_zvtx_effi_in = false
         );
+        void SetAngelika_rate(bool Angelika_rate_tag_in) {Angelika_rate_tag = Angelika_rate_tag_in;}
         void PrepareRate(string input_file_directory = "null");
         void OutputRawRate(string output_file_directory);
         void SetDetectorName(string detector_name);
         void SetDemoFactor(pair<double,double> demo_factor_in) {demo_factor = demo_factor_in;}
         void ImportCADReadings(string cad_reading_directory, bool SD_column = false);
-        std::pair<TGraphErrors *, TGraphErrors *> CombineMacro(string detector_name, bool only_raw_rate_tag_in = false);
+        void ImportAngelikaRates(string Angelika_file_directory, string scan_direction_string, string detector_string = "ZDC");
+        void MakeCorrelationAngelika();
+        std::pair<TGraphErrors *, TGraphErrors *> CombineMacro(string detector_name, bool only_raw_rate_tag_in = false, string suffix_string = "");
         void SetNcollision_corr(bool NCollision_corr_in) {NCollision_corr = NCollision_corr_in;}
         void SetBeamIntensity_corr(bool beam_intensity_corr_in) {beam_intensity_corr = beam_intensity_corr_in;}
         void SetMBDvtxZEffiFunc(TF1* MBD_vtxZ_effi_func_in);
@@ -56,8 +59,10 @@ class gl1_scaler_ana
         void SaveHistROOT();
         virtual void ClearUp();
         static void PrintInfo(string scan_direction_string, vector<pair<string, TGraphErrors *>> vector_in, int column_size = 10);
-        void GetMachineLumi();
-        void GetDetectorCrossSection();
+        void CalculateMachineLumi();
+        void CalculateDetectorCrossSection();
+        pair<double, double> GetOverlapWidths();
+        double GetDetectorCrossSection();
         void GetInformation();
 
     protected:
@@ -144,6 +149,19 @@ class gl1_scaler_ana
         long long GL1Scalers_MBDNS_raw; // note : 10
         long long GL1Scalers_MBDNS_live;
         long long GL1Scalers_MBDNS_scaled;
+
+        bool Angelika_rate_tag;
+        vector<float> Angelika_rate_V;
+        vector<float> Angelika_rate_H;
+        vector<float> Angelika_time_step_vecH;
+        vector<float> Angelika_ZDCNS_rate_vecH;
+        vector<float> Angelika_ZDCN_rate_vecH;
+        vector<float> Angelika_ZDCS_rate_vecH;
+        vector<float> Angelika_time_step_vecV;
+        vector<float> Angelika_ZDCNS_rate_vecV;
+        vector<float> Angelika_ZDCN_rate_vecV;
+        vector<float> Angelika_ZDCS_rate_vecV;
+        TF1 * unity_line;
 
         
         TF1 * MBD_vtxZ_effi_func = nullptr;

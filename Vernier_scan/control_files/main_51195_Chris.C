@@ -1,6 +1,6 @@
-#include "gl1_scaler_ana.h"
+#include "../gl1_scaler_ana.h"
 
-R__LOAD_LIBRARY(libgl1_scaler_ana.so)
+R__LOAD_LIBRARY(../libgl1_scaler_ana.so)
 
 int main_51195_Chris()
 {

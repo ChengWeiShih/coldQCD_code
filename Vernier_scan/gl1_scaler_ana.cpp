@@ -26,7 +26,8 @@ detector_selection("MBDNS"),
 global_ana_counting(0),
 BPM_StdDev(false),
 use_set_pos(use_set_pos_in),
-MBD_zvtx_effi(MBD_zvtx_effi_in)
+MBD_zvtx_effi(MBD_zvtx_effi_in),
+Angelika_rate_tag(false)
 {
     cout<<"============================================================================================================"<<endl;
     cout<<"============================================================================================================"<<endl;
@@ -124,6 +125,16 @@ MBD_zvtx_effi(MBD_zvtx_effi_in)
     step_selected_T_range_H.clear();
     step_counting_range_H.clear();
     
+    Angelika_time_step_vecH.clear();
+    Angelika_ZDCNS_rate_vecH.clear();
+    Angelika_ZDCN_rate_vecH.clear();
+    Angelika_ZDCS_rate_vecH.clear();
+    Angelika_time_step_vecV.clear();
+    Angelika_ZDCNS_rate_vecV.clear();
+    Angelika_ZDCN_rate_vecV.clear();
+    Angelika_ZDCS_rate_vecV.clear();
+    Angelika_rate_V.clear();
+    Angelika_rate_H.clear();
 
 
     SetsPhenixStyle();
@@ -241,6 +252,10 @@ MBD_zvtx_effi(MBD_zvtx_effi_in)
         ));
         h1D_detectorNS_vertexZ_postCorr_vecH.back() -> GetXaxis() -> SetNdivisions(505);
     }
+
+    unity_line = new TF1("unity_line","pol1",-1000000,2000000);
+    unity_line -> SetParameters(0,1);
+    unity_line -> SetLineColor(kRed);
 
     draw_text = new TLatex();
     draw_text -> SetNDC();
@@ -736,7 +751,7 @@ void gl1_scaler_ana::OutputRawRate(string output_file_directory)
 
 }
 
-std::pair<TGraphErrors *, TGraphErrors *> gl1_scaler_ana::CombineMacro(string detector_name, bool only_raw_rate_tag_in)
+std::pair<TGraphErrors *, TGraphErrors *> gl1_scaler_ana::CombineMacro(string detector_name, bool only_raw_rate_tag_in, string suffix_string)
 {
     cout<<endl;
     cout<<endl;
@@ -749,7 +764,8 @@ std::pair<TGraphErrors *, TGraphErrors *> gl1_scaler_ana::CombineMacro(string de
     if (beam_intensity_corr) final_output_directory += "_ICorr";
     if (accidental_correction) final_output_directory += "_AcciCorr";
     if (use_set_pos) final_output_directory += "_SetPos";
-    if (MBD_zvtx_effi) final_output_directory += "_ZvtxEffi";
+    if (MBD_zvtx_effi) final_output_directory += Form("_ZvtxEffi%s", suffix_string.c_str());
+    if (Angelika_rate_tag) final_output_directory += "_Angelika";
     system(Form("mkdir -p %s", final_output_directory.c_str()));
     
     only_raw_rate_tag = only_raw_rate_tag_in;
@@ -771,12 +787,12 @@ std::pair<TGraphErrors *, TGraphErrors *> gl1_scaler_ana::CombineMacro(string de
         gr_BPM_raw_detectorNS_rate_V -> GetYaxis() -> SetTitle(Form("Raw %s trigger rate [Hz]", detector_selection.c_str()));
         gr_BPM_raw_detectorNS_rate_H -> GetYaxis() -> SetTitle(Form("Raw %s trigger rate [Hz]", detector_selection.c_str()));
     }
-
+    
     PrepareData();
     if (only_raw_rate_tag == false) {CombineData();} // note : run full analysis
     DrawPlots();
-    if (only_raw_rate_tag == false) {GetMachineLumi();} // note : run full analysis
-    if (only_raw_rate_tag == false) {GetDetectorCrossSection();} // note : run full analysis
+    if (only_raw_rate_tag == false) {CalculateMachineLumi();} // note : run full analysis
+    if (only_raw_rate_tag == false) {CalculateDetectorCrossSection();} // note : run full analysis
     // ClearUp();
 
     global_ana_counting++;
@@ -1098,7 +1114,7 @@ void gl1_scaler_ana::PrepareData_subfunc(
     
 
     // note : for the accidental correction factor of ZDCNS
-    // note : method quoted from Angelica's method
+    // note : method quoted from Angelika's method
     if (detector_selection == "ZDCNS")
     {
         for (int i = 0; i < step_selected_T_range_All.size(); i++)
@@ -1153,7 +1169,12 @@ void gl1_scaler_ana::CombineData()
 
     for (int i = 0; i < range_t_V.size(); i++)
     {
-        double Y_point = DetectorNS_rate_avg_vecV[i];
+        double Y_point = (Angelika_rate_tag) ? Angelika_rate_V[i] : DetectorNS_rate_avg_vecV[i];
+        if (detector_selection == "MBDNS" && MBD_zvtx_effi){
+            cout<<"Vertical Scan : "<<Y_point<<" Hz, MBDNS zvtx effi correction factor : "<<detectorNS_zvtx_effi_correction_V[i]<<endl;
+            Y_point = Y_point * detectorNS_zvtx_effi_correction_V[i];
+        }
+
         if (NCollision_corr) {
             cout<<"Vertical Scan : "<<Y_point<<" Hz, NCollision Correction factor : "<<multi_collision_correction_V[i]<<endl;
             Y_point = Y_point * multi_collision_correction_V[i];
@@ -1170,15 +1191,20 @@ void gl1_scaler_ana::CombineData()
         }
 
         gr_BPM_raw_detectorNS_rate_V -> SetPoint(i, Average_BPM_pos_V[i], Y_point);
-        gr_BPM_raw_detectorNS_rate_V -> SetPointError(i, StdDev_BPM_pos_V[i], DetectorNS_rate_avg_vecV_error[i]);
+        if (!Angelika_rate_tag) {gr_BPM_raw_detectorNS_rate_V -> SetPointError(i, StdDev_BPM_pos_V[i], DetectorNS_rate_avg_vecV_error[i]);}
 
         gr_BPM_raw_detectorNS_rate_V_demo -> SetPoint(i, Average_BPM_pos_V[i], Y_point);
-        gr_BPM_raw_detectorNS_rate_V_demo -> SetPointError(i, StdDev_BPM_pos_V[i] * demo_factor.first, DetectorNS_rate_avg_vecV_error[i] * demo_factor.second);
+        if (!Angelika_rate_tag) {gr_BPM_raw_detectorNS_rate_V_demo -> SetPointError(i, StdDev_BPM_pos_V[i] * demo_factor.first, DetectorNS_rate_avg_vecV_error[i] * demo_factor.second);}
     }
 
     for (int i = 0; i < range_t_H.size(); i++)
     {
-        double Y_point = DetectorNS_rate_avg_vecH[i];
+        double Y_point = (Angelika_rate_tag) ? Angelika_rate_H[i] : DetectorNS_rate_avg_vecH[i];
+        if (detector_selection == "MBDNS" && MBD_zvtx_effi){
+            cout<<"Horizontal Scan : "<<Y_point<<" Hz, MBDNS zvtx effi correction factor : "<<detectorNS_zvtx_effi_correction_H[i]<<endl;
+            Y_point = Y_point * detectorNS_zvtx_effi_correction_H[i];
+        }
+
         if (NCollision_corr) {
             cout<<"Horizontal Scan : "<<Y_point<<" Hz, NCollision Correction factor : "<<multi_collision_correction_H[i]<<endl;
             Y_point = Y_point * multi_collision_correction_H[i];
@@ -1195,10 +1221,10 @@ void gl1_scaler_ana::CombineData()
         }
 
         gr_BPM_raw_detectorNS_rate_H -> SetPoint(i, Average_BPM_pos_H[i], Y_point);
-        gr_BPM_raw_detectorNS_rate_H -> SetPointError(i, StdDev_BPM_pos_H[i], DetectorNS_rate_avg_vecH_error[i]);
+        if (!Angelika_rate_tag) {gr_BPM_raw_detectorNS_rate_H -> SetPointError(i, StdDev_BPM_pos_H[i], DetectorNS_rate_avg_vecH_error[i]);}
 
         gr_BPM_raw_detectorNS_rate_H_demo -> SetPoint(i, Average_BPM_pos_H[i], Y_point);
-        gr_BPM_raw_detectorNS_rate_H_demo -> SetPointError(i, StdDev_BPM_pos_H[i] * demo_factor.first, DetectorNS_rate_avg_vecH_error[i] * demo_factor.second);
+        if (!Angelika_rate_tag) {gr_BPM_raw_detectorNS_rate_H_demo -> SetPointError(i, StdDev_BPM_pos_H[i] * demo_factor.first, DetectorNS_rate_avg_vecH_error[i] * demo_factor.second);}
     }
 
     cout<<"Vertical scan : "<<endl;
@@ -1229,6 +1255,41 @@ void gl1_scaler_ana::CombineData()
     gr_BPM_raw_detectorNS_rate_H -> Fit(fit_Gaus_H, "N");
 
     return;
+}
+
+void gl1_scaler_ana::MakeCorrelationAngelika()
+{
+    TGraph * Angelika_vertical_correlation = new TGraph();
+    Angelika_vertical_correlation->GetXaxis()->SetTitle(Form("sPHENIX %s (V) rate [Hz]",detector_selection.c_str()));
+    Angelika_vertical_correlation->GetYaxis()->SetTitle(Form("Angelika %s (V) rate [Hz]",detector_selection.c_str()));
+    Angelika_vertical_correlation->GetXaxis()->SetNdivisions(505);
+    Angelika_vertical_correlation->SetMarkerStyle(20);
+    Angelika_vertical_correlation->SetMarkerSize(0.8);
+    for (int i = 0; i < DetectorNS_rate_avg_vecV.size(); i++ ){
+        Angelika_vertical_correlation -> SetPoint(i, DetectorNS_rate_avg_vecV[i], Angelika_rate_V[i]);
+    }
+
+    TGraph * Angelika_horizontal_correlation = new TGraph();
+    Angelika_horizontal_correlation->GetXaxis()->SetTitle(Form("sPHENIX %s (H) rate [Hz]",detector_selection.c_str()));
+    Angelika_horizontal_correlation->GetYaxis()->SetTitle(Form("Angelika %s (H) rate [Hz]",detector_selection.c_str()));
+    Angelika_horizontal_correlation->GetXaxis()->SetNdivisions(505);
+    Angelika_horizontal_correlation->SetMarkerStyle(20);
+    Angelika_horizontal_correlation->SetMarkerSize(0.8);
+    for (int i = 0; i < DetectorNS_rate_avg_vecH.size(); i++ ){
+        Angelika_horizontal_correlation -> SetPoint(i, DetectorNS_rate_avg_vecH[i], Angelika_rate_H[i]);
+    }
+
+    c1 -> cd();
+    Angelika_vertical_correlation -> Draw("AP");
+    unity_line -> Draw("lsame");
+    c1 -> Print(Form("%s/Angelika_%s_correlation_V.pdf", final_output_directory.c_str(), detector_selection.c_str())); 
+    c1 -> Clear();
+
+    c1 -> cd();
+    Angelika_horizontal_correlation -> Draw("AP");
+    unity_line -> Draw("lsame");
+    c1 -> Print(Form("%s/Angelika_%s_correlation_H.pdf", final_output_directory.c_str(), detector_selection.c_str()));
+    c1 -> Clear();
 }
 
 template <typename T>
@@ -1530,7 +1591,7 @@ void gl1_scaler_ana::DrawPlots()
     gr_BPM_raw_detectorNS_rate_V -> Draw("AP");
     gr_BPM_raw_detectorNS_rate_V_demo -> Draw("Psame");
     fit_Gaus_V -> Draw("lsame");
-    draw_text -> DrawLatex(0.22, 0.88, Form("#splitline{Error bars are timed %.0f (X), %.0f (Y) for visibility,}{original error bars included in the fit}", demo_factor.first, demo_factor.second));
+    if (!Angelika_rate_tag) {draw_text -> DrawLatex(0.22, 0.88, Form("#splitline{Error bars are timed %.0f (X), %.0f (Y) for visibility,}{original error bars included in the fit}", demo_factor.first, demo_factor.second));}
     draw_text -> DrawLatex(0.22, 0.80, Form("Fit height: %.3f #pm %.3f", fit_Gaus_V->GetParameter(0), fit_Gaus_V->GetParError(0)));
     draw_text -> DrawLatex(0.22, 0.76, Form("Fit mean: %.3f #pm %.6f mm", fit_Gaus_V->GetParameter(1), fit_Gaus_V->GetParError(1)));
     draw_text -> DrawLatex(0.22, 0.72, Form("Fit width: %.5f #pm %.6f mm", fit_Gaus_V->GetParameter(2), fit_Gaus_V->GetParError(2)));
@@ -1546,7 +1607,7 @@ void gl1_scaler_ana::DrawPlots()
     gr_BPM_raw_detectorNS_rate_H -> Draw("AP");
     gr_BPM_raw_detectorNS_rate_H_demo -> Draw("Psame");
     fit_Gaus_H -> Draw("lsame");
-    draw_text -> DrawLatex(0.22, 0.88, Form("#splitline{Error bars are timed %.0f (X), %.0f (Y) for visibility,}{original error bars included in the fit}", demo_factor.first, demo_factor.second));
+    if (!Angelika_rate_tag) {draw_text -> DrawLatex(0.22, 0.88, Form("#splitline{Error bars are timed %.0f (X), %.0f (Y) for visibility,}{original error bars included in the fit}", demo_factor.first, demo_factor.second));}
     draw_text -> DrawLatex(0.22, 0.80, Form("Fit height: %.3f #pm %.3f", fit_Gaus_H->GetParameter(0), fit_Gaus_H->GetParError(0)));
     draw_text -> DrawLatex(0.22, 0.76, Form("Fit mean: %.3f #pm %.6f mm", fit_Gaus_H->GetParameter(1), fit_Gaus_H->GetParError(1)));
     draw_text -> DrawLatex(0.22, 0.72, Form("Fit width: %.5f #pm %.6f mm", fit_Gaus_H->GetParameter(2), fit_Gaus_H->GetParError(2)));
@@ -1677,6 +1738,113 @@ double gl1_scaler_ana::tg_stddev (TGraph * input_tgraph) {
 
 	return sqrt( sum_subt / double(input_vector.size()-1) );
 }	
+
+void gl1_scaler_ana::ImportAngelikaRates(string Angelika_file_directory, string scan_direction_string, string detector_string)
+{
+    std::ifstream file(Angelika_file_directory.c_str());
+
+    if (!file.is_open()) {
+        std::cerr << "Could not open the file!" << std::endl;
+        std::cout<< "Please check the file path : "<<Angelika_file_directory<<std::endl;
+        exit(1);
+    }
+
+    std::string line;
+
+    // Skip the header line
+    std::getline(file, line);
+
+    if (detector_string.find("ZDC") != std::string::npos)
+    {
+        std::cout << std::setw(15) << "time"
+            << std::setw(15) << "ZDCNS"
+            << std::setw(15) << "ZDCS"
+            << std::setw(15) << "ZDCN"
+            << std::endl;
+
+        if (scan_direction_string == "H") // note : X
+        {
+            while (std::getline(file, line)) {
+                std::stringstream ss(line);
+                std::string cell;
+
+                std::getline(ss, cell, '\t');
+                Angelika_time_step_vecH.push_back(std::stof(cell));
+
+                std::getline(ss, cell, '\t');
+                Angelika_ZDCNS_rate_vecH.push_back(std::stof(cell));
+
+                std::getline(ss, cell, '\t');
+                Angelika_ZDCS_rate_vecH.push_back(std::stof(cell));
+
+                std::getline(ss, cell, '\t');
+                Angelika_ZDCN_rate_vecH.push_back(std::stof(cell));
+
+            }
+
+            file.close();
+
+            size_t maxSize = std::max({Angelika_time_step_vecH.size(), Angelika_ZDCNS_rate_vecH.size(), Angelika_ZDCS_rate_vecH.size(), Angelika_ZDCN_rate_vecH.size(), Angelika_time_step_vecV.size(), Angelika_ZDCNS_rate_vecV.size(), Angelika_ZDCS_rate_vecV.size(), Angelika_ZDCN_rate_vecV.size()});
+
+            for (size_t i = 0; i < maxSize; ++i) {
+                std::cout << std::setw(15) << (i < Angelika_time_step_vecH.size() ? std::to_string(Angelika_time_step_vecH[i]) : "")
+                    << std::setw(15) << (i < Angelika_ZDCNS_rate_vecH.size() ? std::to_string(Angelika_ZDCNS_rate_vecH[i]) : "")
+                    << std::setw(15) << (i < Angelika_ZDCS_rate_vecH.size() ? std::to_string(Angelika_ZDCS_rate_vecH[i]) : "")
+                    << std::setw(15) << (i < Angelika_ZDCN_rate_vecH.size() ? std::to_string(Angelika_ZDCN_rate_vecH[i]) : "")
+                    << std::endl;
+            }
+        }
+        else if (scan_direction_string == "V") // note : Y
+        {
+            while (std::getline(file, line)) {
+                std::stringstream ss(line);
+                std::string cell;
+
+                std::getline(ss, cell, '\t');
+                Angelika_time_step_vecV.push_back(std::stof(cell));
+
+                std::getline(ss, cell, '\t');
+                Angelika_ZDCNS_rate_vecV.push_back(std::stof(cell));
+
+                std::getline(ss, cell, '\t');
+                Angelika_ZDCS_rate_vecV.push_back(std::stof(cell));
+
+                std::getline(ss, cell, '\t');
+                Angelika_ZDCN_rate_vecV.push_back(std::stof(cell));
+
+            }
+
+            file.close();
+
+            size_t maxSize = std::max({Angelika_time_step_vecH.size(), Angelika_ZDCNS_rate_vecH.size(), Angelika_ZDCS_rate_vecH.size(), Angelika_ZDCN_rate_vecH.size(), Angelika_time_step_vecV.size(), Angelika_ZDCNS_rate_vecV.size(), Angelika_ZDCS_rate_vecV.size(), Angelika_ZDCN_rate_vecV.size()});
+
+            for (size_t i = 0; i < maxSize; ++i) {
+                std::cout << std::setw(15) << (i < Angelika_time_step_vecV.size() ? std::to_string(Angelika_time_step_vecV[i]) : "")
+                    << std::setw(15) << (i < Angelika_ZDCNS_rate_vecV.size() ? std::to_string(Angelika_ZDCNS_rate_vecV[i]) : "")
+                    << std::setw(15) << (i < Angelika_ZDCS_rate_vecV.size() ? std::to_string(Angelika_ZDCS_rate_vecV[i]) : "")
+                    << std::setw(15) << (i < Angelika_ZDCN_rate_vecV.size() ? std::to_string(Angelika_ZDCN_rate_vecV[i]) : "")
+                    << std::endl;
+            }
+
+        }
+        else 
+        {
+            cout<<"In gl1_scaler_ana::ImportAngelikaRates, the scan direction is not recognized, please check the input"<<endl;
+            exit(1);
+        }
+    }
+
+    if (scan_direction_string == "V"){
+        if (detector_string == "ZDCNS"){Angelika_rate_V = Angelika_ZDCNS_rate_vecV;}
+        else if (detector_string == "ZDCN") {Angelika_rate_V = Angelika_ZDCN_rate_vecV;}
+        else if (detector_string == "ZDCS") {Angelika_rate_V = Angelika_ZDCS_rate_vecV;}
+    }
+    else if (scan_direction_string == "H"){
+        if (detector_string == "ZDCNS"){Angelika_rate_H = Angelika_ZDCNS_rate_vecH;}
+        else if (detector_string == "ZDCN") {Angelika_rate_H = Angelika_ZDCN_rate_vecH;}
+        else if (detector_string == "ZDCS") {Angelika_rate_H = Angelika_ZDCS_rate_vecH;}
+    }
+}
 
 void gl1_scaler_ana::ImportCADReadings(string cad_reading_directory, bool SD_column)
 {
@@ -1809,7 +1977,7 @@ void gl1_scaler_ana::ImportCADReadings(string cad_reading_directory, bool SD_col
 
 }
 
-void gl1_scaler_ana::GetMachineLumi()
+void gl1_scaler_ana::CalculateMachineLumi()
 {
     double DCCT_B_one_bunch = DCCT_B * pow(10, 9) / n_bunches; // note : beam intensity of blue beam, take the average of the whole trend
     double DCCT_Y_one_bunch = DCCT_Y * pow(10, 9) / n_bunches; // note : beam intensity of yellow beam, take the average of the whole trend
@@ -1828,7 +1996,7 @@ void gl1_scaler_ana::GetMachineLumi()
     cout<<"Machine luminosity : "<<machine_lumi<<" mb^-1 s^-1"<<endl;
 }
 
-void gl1_scaler_ana::GetDetectorCrossSection()
+void gl1_scaler_ana::CalculateDetectorCrossSection()
 {
     cout<<"The final gaussian + offset height : "<<endl;
 
@@ -1843,6 +2011,19 @@ void gl1_scaler_ana::GetDetectorCrossSection()
     cout<< detector_selection << " cross section : "<<detector_cross_section<<" mb"<<endl;
     cout<<"\n\n\n\n\n"<<endl;
 
+}
+
+
+
+double gl1_scaler_ana::GetDetectorCrossSection()
+{
+    return detector_cross_section;
+}
+
+pair<double, double> gl1_scaler_ana::GetOverlapWidths()
+{
+    // todo : if we end up with having the double gaussian, modify here
+    return {fit_Gaus_V -> GetParameter(2), fit_Gaus_H -> GetParameter(2)}; // note : vertical and Horizontal
 }
 
 void gl1_scaler_ana::GetInformation()
