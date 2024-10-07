@@ -20,6 +20,7 @@
 #include <TLegend.h>
 #include <TLine.h>
 #include <TH1F.h>
+#include <TGaxis.h>
 
 #include "sPhenixStyle.h"
 
@@ -39,7 +40,8 @@ class gl1_scaler_ana
             bool beam_intensity_corr_in,
             bool accidental_correction_in,
             bool use_set_pos_in = false,
-            bool MBD_zvtx_effi_in = false
+            bool MBD_zvtx_effi_in = false,
+            bool Angelika_rate_tag_in = false
         );
         void SetAngelika_rate(bool Angelika_rate_tag_in) {Angelika_rate_tag = Angelika_rate_tag_in;}
         void PrepareRate(string input_file_directory = "null");
@@ -64,6 +66,8 @@ class gl1_scaler_ana
         pair<double, double> GetOverlapWidths();
         double GetDetectorCrossSection();
         void GetInformation();
+        void SetSphLabelingPreliminary(bool preliminary_tag) {if (preliminary_tag) {sPH_labeling = "Preliminary";}}
+        void SetShowEBarTag(bool show_eBar_tag_in) {show_eBar_tag = show_eBar_tag_in;}
 
     protected:
         // static double FindHighestEntry_grE(TGraphErrors * gr);
@@ -111,6 +115,9 @@ class gl1_scaler_ana
         bool MBD_zvtx_effi;
         string detector_selection;
 
+        string RawRate_Xaxis_title;
+
+        bool show_eBar_tag;
 
         TCanvas * c1;
         TFile * file_in;
@@ -124,6 +131,8 @@ class gl1_scaler_ana
         map<int, int> live_trigger_map;
         double mbd_z_vtx;
         double zdc_z_vtx;
+        string sPH_labeling;
+        TLatex * ltx;
 
         long long GL1Scalers_clock_raw; // note : 0
         long long GL1Scalers_clock_live;
@@ -161,6 +170,8 @@ class gl1_scaler_ana
         vector<float> Angelika_ZDCNS_rate_vecV;
         vector<float> Angelika_ZDCN_rate_vecV;
         vector<float> Angelika_ZDCS_rate_vecV;
+        TGraph * Angelika_vertical_correlation = nullptr;
+        TGraph * Angelika_horizontal_correlation = nullptr;
         TF1 * unity_line;
 
         

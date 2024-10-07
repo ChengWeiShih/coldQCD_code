@@ -10,7 +10,8 @@ gl1_scaler_ana::gl1_scaler_ana(
     bool beam_intensity_corr_in,
     bool accidental_correction_in,
     bool use_set_pos_in,
-    bool MBD_zvtx_effi_in
+    bool MBD_zvtx_effi_in,
+    bool Angelika_rate_tag_in
 )
 : 
 input_directory(input_directory_in), 
@@ -27,7 +28,9 @@ global_ana_counting(0),
 BPM_StdDev(false),
 use_set_pos(use_set_pos_in),
 MBD_zvtx_effi(MBD_zvtx_effi_in),
-Angelika_rate_tag(false)
+Angelika_rate_tag(Angelika_rate_tag_in),
+sPH_labeling("Internal"),
+show_eBar_tag(true)
 {
     cout<<"============================================================================================================"<<endl;
     cout<<"============================================================================================================"<<endl;
@@ -140,6 +143,13 @@ Angelika_rate_tag(false)
     SetsPhenixStyle();
     c1 = new TCanvas("c1", "c1", 950, 800);
     c1 -> cd();
+
+    TGaxis::SetMaxDigits(4);
+
+    ltx = new TLatex();
+    ltx->SetNDC();
+    ltx->SetTextSize(0.045);
+    ltx->SetTextAlign(31);
 
     gr_raw_ZDCS_rate = new TGraph(); 
     gl1_scaler_ana::quick_tgraph_set(gr_raw_ZDCS_rate, "Time [s]", "Raw ZDCS trigger rate [Hz]");
@@ -266,7 +276,7 @@ Angelika_rate_tag(false)
     coord_line -> SetLineColor(16);
     coord_line -> SetLineStyle(2);
 
-    legend = new TLegend(0.45,0.8,0.70,0.9);
+    legend = new TLegend(0.55,0.73,0.8,0.83);
     // legend -> SetMargin(0);
     legend->SetTextSize(0.03);
 
@@ -275,11 +285,13 @@ Angelika_rate_tag(false)
     DetectorNS_rate_avg_vecH.clear();
     DetectorNS_rate_avg_vecH_error.clear();
 
+    RawRate_Xaxis_title = (use_set_pos) ? "Set" : "BPM";
+
     gr_BPM_raw_detectorNS_rate_V = new TGraphErrors();
     gr_BPM_raw_detectorNS_rate_V -> SetMarkerStyle(20);
     gr_BPM_raw_detectorNS_rate_V -> SetMarkerSize(0.8);
     gr_BPM_raw_detectorNS_rate_V -> SetMarkerColor(1);
-    gr_BPM_raw_detectorNS_rate_V -> GetXaxis() -> SetTitle("BPM position (Y scan) [mm]");
+    gr_BPM_raw_detectorNS_rate_V -> GetXaxis() -> SetTitle(Form("%s position (Y scan) [mm]", RawRate_Xaxis_title.c_str()));
     gr_BPM_raw_detectorNS_rate_V -> GetYaxis() -> SetTitle("Raw MBDNS coin. trigger rate [Hz]");
     gr_BPM_raw_detectorNS_rate_V -> GetXaxis() -> SetNdivisions(505);
 
@@ -287,7 +299,7 @@ Angelika_rate_tag(false)
     gr_BPM_raw_detectorNS_rate_H -> SetMarkerStyle(20);
     gr_BPM_raw_detectorNS_rate_H -> SetMarkerSize(0.8);
     gr_BPM_raw_detectorNS_rate_H -> SetMarkerColor(1);
-    gr_BPM_raw_detectorNS_rate_H -> GetXaxis() -> SetTitle("BPM position (X scan) [mm]");
+    gr_BPM_raw_detectorNS_rate_H -> GetXaxis() -> SetTitle(Form("%s position (X scan) [mm]", RawRate_Xaxis_title.c_str()));
     gr_BPM_raw_detectorNS_rate_H -> GetYaxis() -> SetTitle("Raw MBDNS coin. trigger rate [Hz]");
     gr_BPM_raw_detectorNS_rate_H -> GetXaxis() -> SetNdivisions(505);
 
@@ -767,6 +779,7 @@ std::pair<TGraphErrors *, TGraphErrors *> gl1_scaler_ana::CombineMacro(string de
     if (MBD_zvtx_effi) final_output_directory += Form("_ZvtxEffi%s", suffix_string.c_str());
     if (Angelika_rate_tag) final_output_directory += "_Angelika";
     system(Form("mkdir -p %s", final_output_directory.c_str()));
+    system(Form("mkdir -p %s/StepPlot", final_output_directory.c_str()));
     
     only_raw_rate_tag = only_raw_rate_tag_in;
 
@@ -1230,13 +1243,13 @@ void gl1_scaler_ana::CombineData()
     cout<<"Vertical scan : "<<endl;
     for (int i = 0; i < range_t_V.size(); i++)
     {
-        cout<<"BPM position : "<<Average_BPM_pos_V[i]<<" mm, "<<detector_selection<<" rate : "<<DetectorNS_rate_avg_vecV[i]<<" Hz, Error : "<<DetectorNS_rate_avg_vecV_error[i]<<" Hz"<<endl;
+        cout<<Form("%s position : ", RawRate_Xaxis_title.c_str())<<Average_BPM_pos_V[i]<<" mm, "<<detector_selection<<" rate : "<<DetectorNS_rate_avg_vecV[i]<<" Hz, Error : "<<DetectorNS_rate_avg_vecV_error[i]<<" Hz"<<endl;
     }
 
     cout<<"Horizontal scan : "<<endl;
     for (int i = 0; i < range_t_H.size(); i++)
     {
-        cout<<"BPM position : "<<Average_BPM_pos_H[i]<<" mm, "<<detector_selection<<" rate : "<<DetectorNS_rate_avg_vecH[i]<<" Hz, Error : "<<DetectorNS_rate_avg_vecH_error[i]<<" Hz"<<endl;
+        cout<<Form("%s position : ", RawRate_Xaxis_title.c_str())<<Average_BPM_pos_H[i]<<" mm, "<<detector_selection<<" rate : "<<DetectorNS_rate_avg_vecH[i]<<" Hz, Error : "<<DetectorNS_rate_avg_vecH_error[i]<<" Hz"<<endl;
     }
 
     // note : par[0] : size
@@ -1259,7 +1272,7 @@ void gl1_scaler_ana::CombineData()
 
 void gl1_scaler_ana::MakeCorrelationAngelika()
 {
-    TGraph * Angelika_vertical_correlation = new TGraph();
+    Angelika_vertical_correlation = new TGraph();
     Angelika_vertical_correlation->GetXaxis()->SetTitle(Form("sPHENIX %s (V) rate [Hz]",detector_selection.c_str()));
     Angelika_vertical_correlation->GetYaxis()->SetTitle(Form("Angelika %s (V) rate [Hz]",detector_selection.c_str()));
     Angelika_vertical_correlation->GetXaxis()->SetNdivisions(505);
@@ -1269,7 +1282,7 @@ void gl1_scaler_ana::MakeCorrelationAngelika()
         Angelika_vertical_correlation -> SetPoint(i, DetectorNS_rate_avg_vecV[i], Angelika_rate_V[i]);
     }
 
-    TGraph * Angelika_horizontal_correlation = new TGraph();
+    Angelika_horizontal_correlation = new TGraph();
     Angelika_horizontal_correlation->GetXaxis()->SetTitle(Form("sPHENIX %s (H) rate [Hz]",detector_selection.c_str()));
     Angelika_horizontal_correlation->GetYaxis()->SetTitle(Form("Angelika %s (H) rate [Hz]",detector_selection.c_str()));
     Angelika_horizontal_correlation->GetXaxis()->SetNdivisions(505);
@@ -1282,12 +1295,14 @@ void gl1_scaler_ana::MakeCorrelationAngelika()
     c1 -> cd();
     Angelika_vertical_correlation -> Draw("AP");
     unity_line -> Draw("lsame");
+    ltx->DrawLatex(1 - gPad->GetRightMargin(), 1 - gPad->GetTopMargin() + 0.01, Form("#it{#bf{sPHENIX}} %s", sPH_labeling.c_str()));
     c1 -> Print(Form("%s/Angelika_%s_correlation_V.pdf", final_output_directory.c_str(), detector_selection.c_str())); 
     c1 -> Clear();
 
     c1 -> cd();
     Angelika_horizontal_correlation -> Draw("AP");
     unity_line -> Draw("lsame");
+    ltx->DrawLatex(1 - gPad->GetRightMargin(), 1 - gPad->GetTopMargin() + 0.01, Form("#it{#bf{sPHENIX}} %s", sPH_labeling.c_str()));
     c1 -> Print(Form("%s/Angelika_%s_correlation_H.pdf", final_output_directory.c_str(), detector_selection.c_str()));
     c1 -> Clear();
 }
@@ -1359,6 +1374,7 @@ void gl1_scaler_ana::DrawPlots()
     c1 -> cd();
 
     gr_raw_ZDCS_rate -> Draw("AL");
+    ltx->DrawLatex(1 - gPad->GetRightMargin(), 1 - gPad->GetTopMargin() + 0.01, Form("#it{#bf{sPHENIX}} %s", sPH_labeling.c_str()));
     c1 -> Print(Form("%s/raw_ZDCS_rate.pdf", final_output_directory.c_str()));
     c1 -> SetLogy(1);
     c1 -> Print(Form("%s/raw_ZDCS_rate_log.pdf", final_output_directory.c_str()));
@@ -1366,6 +1382,7 @@ void gl1_scaler_ana::DrawPlots()
     c1 -> Clear();
 
     gr_raw_ZDCN_rate -> Draw("AL");
+    ltx->DrawLatex(1 - gPad->GetRightMargin(), 1 - gPad->GetTopMargin() + 0.01, Form("#it{#bf{sPHENIX}} %s", sPH_labeling.c_str()));
     c1 -> Print(Form("%s/raw_ZDCN_rate.pdf", final_output_directory.c_str()));
     c1 -> SetLogy(1);
     c1 -> Print(Form("%s/raw_ZDCN_rate_log.pdf", final_output_directory.c_str()));
@@ -1373,6 +1390,7 @@ void gl1_scaler_ana::DrawPlots()
     c1 -> Clear();
 
     gr_raw_ZDCNS_rate -> Draw("AL");
+    ltx->DrawLatex(1 - gPad->GetRightMargin(), 1 - gPad->GetTopMargin() + 0.01, Form("#it{#bf{sPHENIX}} %s", sPH_labeling.c_str()));
     c1 -> Print(Form("%s/raw_ZDCNS_rate.pdf", final_output_directory.c_str()));
     c1 -> SetLogy(1);
     c1 -> Print(Form("%s/raw_ZDCNS_rate_log.pdf", final_output_directory.c_str()));
@@ -1380,6 +1398,7 @@ void gl1_scaler_ana::DrawPlots()
     c1 -> Clear();
 
     gr_raw_MBDS_rate -> Draw("AL");
+    ltx->DrawLatex(1 - gPad->GetRightMargin(), 1 - gPad->GetTopMargin() + 0.01, Form("#it{#bf{sPHENIX}} %s", sPH_labeling.c_str()));
     c1 -> Print(Form("%s/raw_MBDS_rate.pdf", final_output_directory.c_str()));
     c1 -> SetLogy(1);
     c1 -> Print(Form("%s/raw_MBDS_rate_log.pdf", final_output_directory.c_str()));
@@ -1387,6 +1406,7 @@ void gl1_scaler_ana::DrawPlots()
     c1 -> Clear();
     
     gr_raw_MBDN_rate -> Draw("AL");
+    ltx->DrawLatex(1 - gPad->GetRightMargin(), 1 - gPad->GetTopMargin() + 0.01, Form("#it{#bf{sPHENIX}} %s", sPH_labeling.c_str()));
     c1 -> Print(Form("%s/raw_MBDN_rate.pdf", final_output_directory.c_str()));
     c1 -> SetLogy(1);
     c1 -> Print(Form("%s/raw_MBDN_rate_log.pdf", final_output_directory.c_str()));
@@ -1394,6 +1414,7 @@ void gl1_scaler_ana::DrawPlots()
     c1 -> Clear();
 
     gr_raw_MBDNS_rate -> Draw("AL");
+    ltx->DrawLatex(1 - gPad->GetRightMargin(), 1 - gPad->GetTopMargin() + 0.01, Form("#it{#bf{sPHENIX}} %s", sPH_labeling.c_str()));
     c1 -> Print(Form("%s/raw_MBDNS_rate.pdf", final_output_directory.c_str()));
     c1 -> SetLogy(1);
     c1 -> Print(Form("%s/raw_MBDNS_rate_log.pdf", final_output_directory.c_str()));
@@ -1402,6 +1423,7 @@ void gl1_scaler_ana::DrawPlots()
 
     if (detector_selection == "MBDNS"){
         gr_raw_MBDNS_30cm_ratio -> Draw("AL");
+        ltx->DrawLatex(1 - gPad->GetRightMargin(), 1 - gPad->GetTopMargin() + 0.01, Form("#it{#bf{sPHENIX}} %s", sPH_labeling.c_str()));
         c1 -> Print(Form("%s/raw_MBDNS_30cm_ratio.pdf", final_output_directory.c_str()));
         c1 -> SetLogy(1);
         c1 -> Print(Form("%s/raw_MBDNS_30cm_ratio_log.pdf", final_output_directory.c_str()));
@@ -1423,6 +1445,8 @@ void gl1_scaler_ana::DrawPlots()
         gr_raw_detectorNS_rate_vecV_wide[i] -> Draw("AL");
         gr_raw_detectorNS_rate_vecV[i] -> Draw("PSAME");
         fit_vecV[i] -> Draw("lsame");
+
+        ltx->DrawLatex(1 - gPad->GetRightMargin(), 1 - gPad->GetTopMargin() + 0.01, Form("#it{#bf{sPHENIX}} %s", sPH_labeling.c_str()));
 
         coord_line->DrawLine(
             gr_raw_detectorNS_rate_vecV_wide[i]->GetXaxis()->GetXmin(), outlier_rejection_factor_vecV[i].first, 
@@ -1447,7 +1471,7 @@ void gl1_scaler_ana::DrawPlots()
     // note : ============================ ============================ ============================ ============================ ============================
 
     c1 -> Print(Form("%s/raw_%s_rate_vecH.pdf(", final_output_directory.c_str(),detector_selection.c_str()));
-    for (int i = 0; i < range_t_V.size(); i++)
+    for (int i = 0; i < range_t_H.size(); i++)
     {
         c1 -> cd();
         double window_center = (gr_raw_detectorNS_rate_vecH[i]->GetYaxis()->GetXmin() + gr_raw_detectorNS_rate_vecH[i]->GetYaxis()->GetXmax()) / 2;
@@ -1461,6 +1485,8 @@ void gl1_scaler_ana::DrawPlots()
         // cout<<"444"<<endl;
         fit_vecH[i] -> Draw("lsame");
         // cout<<"555"<<endl;
+
+        ltx->DrawLatex(1 - gPad->GetRightMargin(), 1 - gPad->GetTopMargin() + 0.01, Form("#it{#bf{sPHENIX}} %s", sPH_labeling.c_str()));
 
         coord_line->DrawLine(
             gr_raw_detectorNS_rate_vecH_wide[i]->GetXaxis()->GetXmin(), outlier_rejection_factor_vecH[i].first, 
@@ -1487,6 +1513,72 @@ void gl1_scaler_ana::DrawPlots()
     c1 -> Print(Form("%s/raw_%s_rate_vecH.pdf)", final_output_directory.c_str(),detector_selection.c_str()));
     c1 -> Clear();
 
+    legend -> AddEntry(gr_raw_detectorNS_rate_vecV_wide[0], "Raw rate", "l");
+    legend -> AddEntry(gr_raw_detectorNS_rate_vecV[0], "Selected region", "p");
+    legend -> AddEntry(fit_vecV[0], "Fit", "l");
+    legend -> AddEntry(coord_line, "Outlier cut", "l");
+
+    // note : ============================ separate step plot ============================ ============================ ============================
+    for (int i = 0; i < range_t_V.size(); i++)
+    {
+        c1 -> cd();
+        double window_center = (gr_raw_detectorNS_rate_vecV[i]->GetYaxis()->GetXmin() + gr_raw_detectorNS_rate_vecV[i]->GetYaxis()->GetXmax()) / 2;
+        double window_width = ((gr_raw_detectorNS_rate_vecV[i]->GetYaxis()->GetXmax() - gr_raw_detectorNS_rate_vecV[i]->GetYaxis()->GetXmin()) / 2.) * 5;
+        gr_raw_detectorNS_rate_vecV_wide[i] -> GetYaxis() -> SetRangeUser(window_center - window_width, window_center + window_width);
+        gr_raw_detectorNS_rate_vecV_wide[i] -> Draw("AL");
+        gr_raw_detectorNS_rate_vecV[i] -> Draw("PSAME");
+        fit_vecV[i] -> Draw("lsame");
+
+        ltx->DrawLatex(1 - gPad->GetRightMargin(), 1 - gPad->GetTopMargin() + 0.01, Form("#it{#bf{sPHENIX}} %s", sPH_labeling.c_str()));
+
+        coord_line->DrawLine(
+            gr_raw_detectorNS_rate_vecV_wide[i]->GetXaxis()->GetXmin(), outlier_rejection_factor_vecV[i].first, 
+            gr_raw_detectorNS_rate_vecV_wide[i]->GetXaxis()->GetXmax(), outlier_rejection_factor_vecV[i].first
+        );
+        coord_line->DrawLine(
+            gr_raw_detectorNS_rate_vecV_wide[i]->GetXaxis()->GetXmin(), outlier_rejection_factor_vecV[i].second, 
+            gr_raw_detectorNS_rate_vecV_wide[i]->GetXaxis()->GetXmax(), outlier_rejection_factor_vecV[i].second
+        );
+
+        draw_text -> DrawLatex(0.22, 0.88, Form("Pol0 fit: %.3f #pm %.3f", fit_vecV[i]->GetParameter(0), fit_vecV[i]->GetParError(0)));
+
+        legend -> Draw("same");
+
+        c1 -> Print(Form("%s/StepPlot/raw_%s_rate_vecV_%d.pdf", final_output_directory.c_str(),detector_selection.c_str(),i));
+        c1 -> Clear();
+    }
+
+    // note : ============================ separate step plot ============================ ============================ ============================
+    for (int i = 0; i < range_t_H.size(); i++)
+    {
+        c1 -> cd();
+        double window_center = (gr_raw_detectorNS_rate_vecH[i]->GetYaxis()->GetXmin() + gr_raw_detectorNS_rate_vecH[i]->GetYaxis()->GetXmax()) / 2;
+        double window_width = ((gr_raw_detectorNS_rate_vecH[i]->GetYaxis()->GetXmax() - gr_raw_detectorNS_rate_vecH[i]->GetYaxis()->GetXmin()) / 2.) * 5;
+        gr_raw_detectorNS_rate_vecH_wide[i] -> GetYaxis() -> SetRangeUser(window_center - window_width, window_center + window_width);
+        gr_raw_detectorNS_rate_vecH_wide[i] -> Draw("AL");
+        gr_raw_detectorNS_rate_vecH[i] -> Draw("PSAME");
+        fit_vecH[i] -> Draw("lsame");
+
+        ltx->DrawLatex(1 - gPad->GetRightMargin(), 1 - gPad->GetTopMargin() + 0.01, Form("#it{#bf{sPHENIX}} %s", sPH_labeling.c_str()));
+
+        coord_line->DrawLine(
+            gr_raw_detectorNS_rate_vecH_wide[i]->GetXaxis()->GetXmin(), outlier_rejection_factor_vecH[i].first, 
+            gr_raw_detectorNS_rate_vecH_wide[i]->GetXaxis()->GetXmax(), outlier_rejection_factor_vecH[i].first
+        );
+        coord_line->DrawLine(
+            gr_raw_detectorNS_rate_vecH_wide[i]->GetXaxis()->GetXmin(), outlier_rejection_factor_vecH[i].second, 
+            gr_raw_detectorNS_rate_vecH_wide[i]->GetXaxis()->GetXmax(), outlier_rejection_factor_vecH[i].second
+        );
+
+        draw_text -> DrawLatex(0.22, 0.88, Form("Pol0 fit: %.3f #pm %.3f", fit_vecV[i]->GetParameter(0), fit_vecV[i]->GetParError(0)));
+
+        legend -> Draw("same");
+
+        c1 -> Print(Form("%s/StepPlot/raw_%s_rate_vecH_%d.pdf", final_output_directory.c_str(),detector_selection.c_str(),i));
+        c1 -> Clear();
+    }
+
+
     // note : ============================ ============================ ============================ ============================ ============================
 
     c1 -> cd();
@@ -1497,6 +1589,8 @@ void gl1_scaler_ana::DrawPlots()
         // fit_gaus_vecV[i] -> SetLineColor(kRed);
         // fit_gaus_vecV[i] -> Draw("lsame");
         
+        ltx->DrawLatex(1 - gPad->GetRightMargin(), 1 - gPad->GetTopMargin() + 0.01, Form("#it{#bf{sPHENIX}} %s", sPH_labeling.c_str()));
+
         coord_line->DrawLine(
             outlier_rejection_factor_vecV[i].first, h1D_raw_detectorNS_rate_vecV[i]->GetMinimum(), 
             outlier_rejection_factor_vecV[i].first, h1D_raw_detectorNS_rate_vecV[i]->GetMaximum()
@@ -1522,6 +1616,8 @@ void gl1_scaler_ana::DrawPlots()
         // fit_gaus_vecH[i] -> SetLineColor(kRed);
         // fit_gaus_vecH[i] -> Draw("lsame");
         
+        ltx->DrawLatex(1 - gPad->GetRightMargin(), 1 - gPad->GetTopMargin() + 0.01, Form("#it{#bf{sPHENIX}} %s", sPH_labeling.c_str()));
+
         coord_line->DrawLine(
             outlier_rejection_factor_vecH[i].first, h1D_raw_detectorNS_rate_vecH[i]->GetMinimum(), 
             outlier_rejection_factor_vecH[i].first, h1D_raw_detectorNS_rate_vecH[i]->GetMaximum()
@@ -1545,6 +1641,7 @@ void gl1_scaler_ana::DrawPlots()
         for(int i = 0; i < h1D_detectorNS_vertexZ_vecV.size(); i++)
         {
             h1D_detectorNS_vertexZ_vecV[i] -> Draw("hist");
+            ltx->DrawLatex(1 - gPad->GetRightMargin(), 1 - gPad->GetTopMargin() + 0.01, Form("#it{#bf{sPHENIX}} %s", sPH_labeling.c_str()));
             c1 -> Print(Form("%s/h1D_MBDNS_vtxZ_vecV.pdf", final_output_directory.c_str()));
             c1 -> Clear();
         }
@@ -1556,6 +1653,7 @@ void gl1_scaler_ana::DrawPlots()
         for(int i = 0; i < h1D_detectorNS_vertexZ_vecH.size(); i++)
         {
             h1D_detectorNS_vertexZ_vecH[i] -> Draw("hist");
+            ltx->DrawLatex(1 - gPad->GetRightMargin(), 1 - gPad->GetTopMargin() + 0.01, Form("#it{#bf{sPHENIX}} %s", sPH_labeling.c_str()));
             c1 -> Print(Form("%s/h1D_MBDNS_vtxZ_vecH.pdf", final_output_directory.c_str()));
             c1 -> Clear();
         }
@@ -1589,9 +1687,10 @@ void gl1_scaler_ana::DrawPlots()
     c1 -> cd();
     gr_BPM_raw_detectorNS_rate_V -> GetYaxis() -> SetRangeUser( 0, (gl1_scaler_ana::FindHighestEntry_gr(gr_BPM_raw_detectorNS_rate_V)).second * 1.7 );
     gr_BPM_raw_detectorNS_rate_V -> Draw("AP");
-    gr_BPM_raw_detectorNS_rate_V_demo -> Draw("Psame");
+    if (show_eBar_tag) {gr_BPM_raw_detectorNS_rate_V_demo -> Draw("Psame");}
     fit_Gaus_V -> Draw("lsame");
-    if (!Angelika_rate_tag) {draw_text -> DrawLatex(0.22, 0.88, Form("#splitline{Error bars are timed %.0f (X), %.0f (Y) for visibility,}{original error bars included in the fit}", demo_factor.first, demo_factor.second));}
+    ltx->DrawLatex(1 - gPad->GetRightMargin(), 1 - gPad->GetTopMargin() + 0.01, Form("#it{#bf{sPHENIX}} %s", sPH_labeling.c_str()));
+    if (!Angelika_rate_tag && show_eBar_tag) {draw_text -> DrawLatex(0.22, 0.88, Form("#splitline{Error bars are timed %.0f (X), %.0f (Y) for visibility,}{original error bars included in the fit}", demo_factor.first, demo_factor.second));}
     draw_text -> DrawLatex(0.22, 0.80, Form("Fit height: %.3f #pm %.3f", fit_Gaus_V->GetParameter(0), fit_Gaus_V->GetParError(0)));
     draw_text -> DrawLatex(0.22, 0.76, Form("Fit mean: %.3f #pm %.6f mm", fit_Gaus_V->GetParameter(1), fit_Gaus_V->GetParError(1)));
     draw_text -> DrawLatex(0.22, 0.72, Form("Fit width: %.5f #pm %.6f mm", fit_Gaus_V->GetParameter(2), fit_Gaus_V->GetParError(2)));
@@ -1605,9 +1704,10 @@ void gl1_scaler_ana::DrawPlots()
     c1 -> cd();
     gr_BPM_raw_detectorNS_rate_H -> GetYaxis() -> SetRangeUser( 0, (gl1_scaler_ana::FindHighestEntry_gr(gr_BPM_raw_detectorNS_rate_H)).second * 1.7 );
     gr_BPM_raw_detectorNS_rate_H -> Draw("AP");
-    gr_BPM_raw_detectorNS_rate_H_demo -> Draw("Psame");
+    if (show_eBar_tag) {gr_BPM_raw_detectorNS_rate_H_demo -> Draw("Psame");}
     fit_Gaus_H -> Draw("lsame");
-    if (!Angelika_rate_tag) {draw_text -> DrawLatex(0.22, 0.88, Form("#splitline{Error bars are timed %.0f (X), %.0f (Y) for visibility,}{original error bars included in the fit}", demo_factor.first, demo_factor.second));}
+    ltx->DrawLatex(1 - gPad->GetRightMargin(), 1 - gPad->GetTopMargin() + 0.01, Form("#it{#bf{sPHENIX}} %s", sPH_labeling.c_str()));
+    if (!Angelika_rate_tag && show_eBar_tag) {draw_text -> DrawLatex(0.22, 0.88, Form("#splitline{Error bars are timed %.0f (X), %.0f (Y) for visibility,}{original error bars included in the fit}", demo_factor.first, demo_factor.second));}
     draw_text -> DrawLatex(0.22, 0.80, Form("Fit height: %.3f #pm %.3f", fit_Gaus_H->GetParameter(0), fit_Gaus_H->GetParError(0)));
     draw_text -> DrawLatex(0.22, 0.76, Form("Fit mean: %.3f #pm %.6f mm", fit_Gaus_H->GetParameter(1), fit_Gaus_H->GetParError(1)));
     draw_text -> DrawLatex(0.22, 0.72, Form("Fit width: %.5f #pm %.6f mm", fit_Gaus_H->GetParameter(2), fit_Gaus_H->GetParError(2)));
@@ -1677,6 +1777,36 @@ void gl1_scaler_ana::ClearUp()
 void gl1_scaler_ana::SaveHistROOT()
 {
     TFile * file_in = new TFile(Form("%s/hist_out.root", final_output_directory.c_str()), "RECREATE");
+
+    gr_raw_ZDCS_rate -> Write("raw_ZDCS_rate");
+    gr_raw_ZDCN_rate -> Write("raw_ZDCN_rate");
+    gr_raw_ZDCNS_rate -> Write("raw_ZDCNS_rate");
+    gr_raw_MBDS_rate -> Write("raw_MBDS_rate");
+    gr_raw_MBDN_rate -> Write("raw_MBDN_rate");
+    gr_raw_MBDNS_rate -> Write("raw_MBDNS_rate");
+    gr_raw_MBDNS_30cm_ratio -> Write("raw_MBDNS_30cm_ratio");
+
+    gr_BPM_raw_detectorNS_rate_V -> Write(Form("gr_BPM_raw_%s_rate_V",detector_selection.c_str()));
+    gr_BPM_raw_detectorNS_rate_V_demo -> Write(Form("gr_BPM_raw_%s_rate_V_demo",detector_selection.c_str()));
+    gr_BPM_raw_detectorNS_rate_H -> Write(Form("gr_BPM_raw_%s_rate_H",detector_selection.c_str()));
+    gr_BPM_raw_detectorNS_rate_H_demo -> Write(Form("gr_BPM_raw_%s_rate_H_demo",detector_selection.c_str()));
+
+    fit_Gaus_V -> Write("fit_Gaus_V");
+    fit_Gaus_H -> Write("fit_Gaus_H");
+
+    for (int i = 0; i < range_t_V.size(); i++)
+    {
+        gr_raw_detectorNS_rate_vecV_wide[i] -> Write(Form("raw_%s_rate_vecV_wide",detector_selection.c_str()));
+        gr_raw_detectorNS_rate_vecV[i] -> Write(Form("raw_%s_rate_vecV",detector_selection.c_str()));
+    }
+
+    for (int i = 0; i < range_t_H.size(); i++)
+    {
+        gr_raw_detectorNS_rate_vecH_wide[i] -> Write(Form("raw_%s_rate_vecH_wide",detector_selection.c_str()));
+        gr_raw_detectorNS_rate_vecH[i] -> Write(Form("raw_%s_rate_vecH",detector_selection.c_str()));
+    }
+
+
     if (detector_selection == "MBDNS")
     {
         for (int i = 0; i < h1D_detectorNS_vertexZ_vecV.size(); i++)
@@ -1689,6 +1819,9 @@ void gl1_scaler_ana::SaveHistROOT()
             h1D_detectorNS_vertexZ_vecH[i] -> Write(Form("MBDvtxZ_Horizontal_scan_step_%d", i));
         }
     }
+
+    if (Angelika_rate_tag && Angelika_vertical_correlation != nullptr) {Angelika_vertical_correlation -> Write("Angelika_vertical_correlation");}
+    if (Angelika_rate_tag && Angelika_horizontal_correlation != nullptr) {Angelika_horizontal_correlation -> Write("Angelika_horizontal_correlation");}
 
     file_in -> Close();
 
@@ -2028,7 +2161,7 @@ pair<double, double> gl1_scaler_ana::GetOverlapWidths()
 
 void gl1_scaler_ana::GetInformation()
 {
-    cout<<std::setw(15)<<"--->"<<detector_selection<<"_"<<NCollision_corr<<"_"<<beam_intensity_corr<<"_"<<accidental_correction<<"_"<<use_set_pos
+    cout<<std::setw(15)<<"--->"<<detector_selection<<"_"<<NCollision_corr<<"_"<<beam_intensity_corr<<"_"<<accidental_correction<<"_"<<use_set_pos<<"_"<<MBD_zvtx_effi<<"_"<<Angelika_rate_tag
     <<std::setw(7)<<", H_width: "<<fit_Gaus_H->GetParameter(2) <<" mm"
     <<std::setw(7)<<", V_width: "<<fit_Gaus_V->GetParameter(2) <<" mm"
     <<std::setw(7)<<", Machine Lumi : "<<machine_lumi<<" mb^-1 s^-1"

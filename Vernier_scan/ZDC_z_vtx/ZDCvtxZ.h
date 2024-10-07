@@ -41,8 +41,12 @@ class ZDCvtxZ
         void RunEvent();
         void DrawPlots();
         void CloseRootFileOut();
+        void SetSphLabelingPreliminary(bool preliminary_tag) {if (preliminary_tag) {sPH_labeling = "Preliminary";}}
 
     protected:
+
+        bool preliminary_tag;
+        string sPH_labeling;
 
         long long nRunEvent;
         string input_full_directory;
@@ -95,6 +99,7 @@ class ZDCvtxZ
         TH1F * MBD_vtxZ_dist_MBDNSTrig;
         TH1F * MBD_vtxZ_dist_ZDCNSTrig;
 
+        TLatex * ltx;
         TLegend * legend;
         TLatex * draw_text;
         TLine * coord_line;
@@ -109,6 +114,7 @@ class ZDCvtxZ
 
         double ZDC_vtxZ_num_out; 
         double ZDC_vtxZ_fit_out;
+        double ZDC_vtxZ_charge_out;
         double ZDC_vtxZ_out;
         double mbd_vtxZ_out;
         int Ngood_waveform_S_out;

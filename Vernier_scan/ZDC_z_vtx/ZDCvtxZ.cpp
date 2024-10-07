@@ -9,7 +9,9 @@ ZDCvtxZ::ZDCvtxZ(
 nRunEvent(nRunEvent_in),
 input_full_directory(input_full_directory_in),
 output_directory(output_directory_in),
-NS_offset(NS_offset_in)
+NS_offset(NS_offset_in),
+preliminary_tag(false),
+sPH_labeling("Internal")
 {
     zdc_map.clear();
     zdc_map["zdcS1"] = {
@@ -131,8 +133,13 @@ NS_offset(NS_offset_in)
     TGaxis::SetMaxDigits(4);
 
     c2 = new TCanvas("","",950, 800);
-
     c1 -> cd();
+
+    ltx = new TLatex();
+    ltx->SetNDC();
+    ltx->SetTextSize(0.045);
+    ltx->SetTextAlign(31);
+
 
     ZDC_vtxZ_fit = new TH1F("ZDC_vtxZ_fit", "ZDC_vtxZ_fit;ZDC_vtxZ_fit [cm];Entries", 100, -500, 500);
     ZDC_vtxZ_fit -> GetXaxis() -> SetNdivisions(505);
@@ -172,6 +179,7 @@ NS_offset(NS_offset_in)
     tree_out = new TTree("tree", "tree");
     tree_out -> Branch("ZDC_vtxZ_num", &ZDC_vtxZ_num_out);
     tree_out -> Branch("ZDC_vtxZ_fit", &ZDC_vtxZ_fit_out);
+    tree_out -> Branch("ZDC_vtxZ_charge", &ZDC_vtxZ_charge_out);
     tree_out -> Branch("ZDC_vtxZ", &ZDC_vtxZ_out);
     tree_out -> Branch("mbd_vtxZ", &mbd_vtxZ_out);
     tree_out -> Branch("Ngood_waveform_S", &Ngood_waveform_S_out);
@@ -395,6 +403,7 @@ void ZDCvtxZ::RunEvent()
                     
                     ZDC_vtxZ_num_out = z_ZDC_num;
                     ZDC_vtxZ_fit_out = z_ZDC_fit;
+                    ZDC_vtxZ_charge_out = z_ZDC_charge;
                     ZDC_vtxZ_out = z_ZDC;
                     mbd_vtxZ_out = mbd_z_vtx;
                     Ngood_waveform_S_out = (zdc_map["zdcS1"].status + zdc_map["zdcS2"].status + zdc_map["zdcS3"].status);
@@ -462,31 +471,37 @@ void ZDCvtxZ::DrawPlots()
 
     c2 -> cd();
     ZDC_vtxZ_fit -> Draw("hist");
+    ltx->DrawLatex(1 - gPad->GetRightMargin(), 1 - gPad->GetTopMargin() + 0.01, Form("#it{#bf{sPHENIX}} %s", sPH_labeling.c_str()));
     c2 -> Print(Form("%s/ZDC_vtxZ_fit.pdf", output_directory.c_str()));
     c2 -> Clear();
 
     c2 -> cd();
-    ZDC_vtxZ_charge -> Draw("hist");
-    c2 -> Print(Form("%s/ZDC_vtxZ_charge.pdf", output_directory.c_str()));
-    c2 -> Clear();
-
-    c2 -> cd();
     vtx_correlation -> Draw("colz0");
+    ltx->DrawLatex(1 - gPad->GetRightMargin(), 1 - gPad->GetTopMargin() + 0.01, Form("#it{#bf{sPHENIX}} %s", sPH_labeling.c_str()));
     c2 -> Print(Form("%s/vtx_correlation_fit.pdf", output_directory.c_str()));
     c2 -> Clear();
 
     c2 -> cd();
     vtx_diff -> Draw("hist");
+    ltx->DrawLatex(1 - gPad->GetRightMargin(), 1 - gPad->GetTopMargin() + 0.01, Form("#it{#bf{sPHENIX}} %s", sPH_labeling.c_str()));
     c2 -> Print(Form("%s/vtx_diff_fit.pdf", output_directory.c_str()));
     c2 -> Clear();
 
     c2 -> cd();
+    ZDC_vtxZ_charge -> Draw("hist");
+    ltx->DrawLatex(1 - gPad->GetRightMargin(), 1 - gPad->GetTopMargin() + 0.01, Form("#it{#bf{sPHENIX}} %s", sPH_labeling.c_str()));
+    c2 -> Print(Form("%s/ZDC_vtxZ_charge.pdf", output_directory.c_str()));
+    c2 -> Clear();
+
+    c2 -> cd();
     vtx_correlation_charge -> Draw("colz0");
+    ltx->DrawLatex(1 - gPad->GetRightMargin(), 1 - gPad->GetTopMargin() + 0.01, Form("#it{#bf{sPHENIX}} %s", sPH_labeling.c_str()));
     c2 -> Print(Form("%s/vtx_correlation_charge.pdf", output_directory.c_str()));
     c2 -> Clear();
 
     c2 -> cd();
     vtx_diff_charge -> Draw("hist");
+    ltx->DrawLatex(1 - gPad->GetRightMargin(), 1 - gPad->GetTopMargin() + 0.01, Form("#it{#bf{sPHENIX}} %s", sPH_labeling.c_str()));
     c2 -> Print(Form("%s/vtx_diff_charge.pdf", output_directory.c_str()));
     c2 -> Clear();
 
@@ -504,6 +519,7 @@ void ZDCvtxZ::DrawPlots()
     MBD_vtxZ_dist_ZDCNSTrig -> Draw("hist same");
     MBD_vtxZ_dist_MBDNSTrig -> Draw("ep same");
     legend -> Draw(" same ");
+    ltx->DrawLatex(1 - gPad->GetRightMargin(), 1 - gPad->GetTopMargin() + 0.01, Form("#it{#bf{sPHENIX}} %s", sPH_labeling.c_str()));
     c2 -> Print(Form("%s/MBD_vtxZ_dist_comp.pdf", output_directory.c_str()));
     c2 -> SetLogy(1);
     c2 -> Print(Form("%s/MBD_vtxZ_dist_comp_log.pdf", output_directory.c_str()));
