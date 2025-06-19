@@ -159,6 +159,21 @@ class gl1_scaler_ana
         long long GL1Scalers_MBDNS_live;
         long long GL1Scalers_MBDNS_scaled;
 
+        // Division ----------------------------------------------------------------------------------------------------------------
+        long long GL1PScalers_clock_raw; // note : 8
+        long long GL1PScalers_clock_live;
+        long long GL1PScalers_clock_scaled;
+        long long GL1PScalers_MBDS_raw; // note : 3
+        long long GL1PScalers_MBDS_live;
+        long long GL1PScalers_MBDS_scaled;
+        long long GL1PScalers_MBDN_raw; // note : 4
+        long long GL1PScalers_MBDN_live;
+        long long GL1PScalers_MBDN_scaled;
+        long long GL1PScalers_MBDNS_raw; // note : 0
+        long long GL1PScalers_MBDNS_live;
+        long long GL1PScalers_MBDNS_scaled;
+        // Division ----------------------------------------------------------------------------------------------------------------
+
         bool Angelika_rate_tag;
         vector<float> Angelika_rate_V;
         vector<float> Angelika_rate_H;
@@ -196,14 +211,33 @@ class gl1_scaler_ana
         map<int, vector<long long>> time_ZDCS_raw_counting;
         map<int, vector<long long>> time_ZDCN_raw_counting;
         map<int, vector<long long>> time_ZDCNS_raw_counting; // note : the ZDCNS counting in every second, the second is given by the GL1 clock
+
         map<int, vector<long long>> time_MBDS_raw_counting;
         map<int, vector<long long>> time_MBDN_raw_counting;
         map<int, vector<long long>> time_MBDNS_raw_counting; // note : the MBDNS counting in every second, the second is given by the GL1 clock
+        map<int, vector<long long>> time_MBDS_live_counting;
+        map<int, vector<long long>> time_MBDN_live_counting;
+        map<int, vector<long long>> time_MBDNS_live_counting; // note : the MBDNS counting in every second, the second is given by the GL1 clock
+
         map<int, pair<int, int>>    time_MBDNS_30cm_raw_counting_pair;
         map<int, vector<double>>    time_MBDNS_zvtx; // note : this one keeps the MBDNS zvtx readings in every second, every second has one vector
         map<int, vector<double>>    time_ZDCNS_zvtx; // note : this one keeps the ZDCNS zvtx readings in every second, every second has one vector
         map<int, vector<long long>>     time_LiveTrigger_Decimal; // note : this one keeps the LiveTrigger readings in every second, every second has one vector
+        
         map<int, pair<long long, long long>> time_GL1Scalers_range; // note : the range of every second
+        map<int, pair<long long, long long>> time_GL1Scalers_live_range; // note : the range of every second
+
+        // note: raw
+        map<std::string, pair<long long, long long>> time_GL1PScalers_MBDS;
+        map<std::string, pair<long long, long long>> time_GL1PScalers_MBDN;
+        map<std::string, pair<long long, long long>> time_GL1PScalers_MBDNS;
+        map<std::string, pair<long long, long long>> time_GL1PScalers_clock;
+        // note : live
+        map<std::string, pair<long long, long long>> time_GL1PScalers_live_MBDS;
+        map<std::string, pair<long long, long long>> time_GL1PScalers_live_MBDN;
+        map<std::string, pair<long long, long long>> time_GL1PScalers_live_MBDNS;
+        map<std::string, pair<long long, long long>> time_GL1PScalers_live_clock;
+        
 
         // note : the copied one, for switch
         map<int, vector<long long>> time_detectorNS_raw_counting; // note : the detectorNS to be filled by the above two

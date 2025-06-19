@@ -220,6 +220,12 @@ int ForwardCaloNtuplizer::Init(PHCompositeNode *topNode)
     GL1Scalers_map[8] = {.index = 8, .name = "MBDS", .raw = -999, .live = -999, .scaled = -999};
     GL1Scalers_map[9] = {.index = 9, .name = "MBDN", .raw = -999, .live = -999, .scaled = -999};
     GL1Scalers_map[10] = {.index = 10, .name = "MBDNS", .raw = -999, .live = -999, .scaled = -999};
+
+    GL1PScalers_map[0] = {.index = 0, .name = "MBDNS", .raw = -999, .live = -999, .scaled = -999};
+    GL1PScalers_map[3] = {.index = 3, .name = "MBDS", .raw = -999, .live = -999, .scaled = -999};
+    GL1PScalers_map[4] = {.index = 4, .name = "MBDN", .raw = -999, .live = -999, .scaled = -999};
+    GL1PScalers_map[8] = {.index = 8, .name = "clock", .raw = -999, .live = -999, .scaled = -999};
+
     
     tree_out -> Branch("evtID", &evtID);
     tree_out -> Branch("evtBCO_gl1", &evtBCO_gl1);
@@ -263,6 +269,13 @@ int ForwardCaloNtuplizer::Init(PHCompositeNode *topNode)
         tree_out -> Branch(Form("GL1Scalers_%s_raw",GL1pair.second.name.c_str()), &GL1pair.second.raw);
         tree_out -> Branch(Form("GL1Scalers_%s_live",GL1pair.second.name.c_str()), &GL1pair.second.live);
         tree_out -> Branch(Form("GL1Scalers_%s_scaled",GL1pair.second.name.c_str()), &GL1pair.second.scaled);
+    }
+
+    for (auto &GL1Ppair : GL1PScalers_map)
+    {
+        tree_out -> Branch(Form("GL1PScalers_%s_raw",GL1Ppair.second.name.c_str()), &GL1Ppair.second.raw);
+        tree_out -> Branch(Form("GL1PScalers_%s_live",GL1Ppair.second.name.c_str()), &GL1Ppair.second.live);
+        tree_out -> Branch(Form("GL1PScalers_%s_scaled",GL1Ppair.second.name.c_str()), &GL1Ppair.second.scaled);
     }
 
     if (with_waveform == true)
@@ -350,6 +363,14 @@ int ForwardCaloNtuplizer::process_event(PHCompositeNode *topNode)
         GL1pair.second.scaled = -999;
     }
 
+    for (auto &GL1Ppair : GL1PScalers_map)
+    {
+        GL1Ppair.second.raw = -999;
+        GL1Ppair.second.live = -999;
+        GL1Ppair.second.scaled = -999;
+    }
+
+
     if (p_gl1)
     {
         bunchnumber = p_gl1->getBunchNumber();
@@ -402,6 +423,13 @@ int ForwardCaloNtuplizer::process_event(PHCompositeNode *topNode)
                 GL1PScaler_raw_vec[i][bunchnumber] = p_gl1->lValue(i, "GL1PRAW");
                 GL1PScaler_live_vec[i][bunchnumber] = p_gl1->lValue(i, "GL1PLIVE");
                 GL1PScaler_scaled_vec[i][bunchnumber] = p_gl1->lValue(i, "GL1PSCALED");
+            }
+
+            if (GL1PScalers_map.find(i) != GL1PScalers_map.end())
+            {
+                GL1PScalers_map[i].raw = p_gl1->lValue(i, "GL1PRAW");
+                GL1PScalers_map[i].live = p_gl1->lValue(i, "GL1PLIVE");
+                GL1PScalers_map[i].scaled = p_gl1->lValue(i, "GL1PSCALED");
             }
         }
 

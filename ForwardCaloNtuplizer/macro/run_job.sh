@@ -10,13 +10,13 @@ fi
 
 source /opt/sphenix/core/bin/sphenix_setup.sh -n ana.427
 
-export MYINSTALL=/sphenix/user/ChengWei/build_sPH_coresoftware/spin_build/ForwardCaloNtuplizer_build/install
+export MYINSTALL=/sphenix/user/ChengWei/coldQCD_code/ForwardCaloNtuplizer/build/install
 export LD_LIBRARY_PATH=$MYINSTALL/lib:$LD_LIBRARY_PATH
 export ROOT_INCLUDE_PATH=$MYINSTALL/include:$ROOT_INCLUDE_PATH
 
 source /opt/sphenix/core/bin/setup_local.sh $MYINSTALL
 
-export ROOT_INCLUDE_PATH=/sphenix/user/ChengWei/sPH_macros/common:$ROOT_INCLUDE_PATH
+# export ROOT_INCLUDE_PATH=/sphenix/user/ChengWei/sPH_macros/common:$ROOT_INCLUDE_PATH
 echo $ROOT_INCLUDE_PATH | sed -e "s/:/\n/g"
 
 # print the environment - needed for debugging

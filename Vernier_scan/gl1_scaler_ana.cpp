@@ -72,6 +72,20 @@ show_eBar_tag(true)
     tree->SetBranchStatus("mbd_z_vtx",  1);
     tree->SetBranchStatus("zdc_z_vtx", 1);
 
+    // note : GL1P
+    tree->SetBranchStatus("GL1PScalers_clock_raw", 1);
+    tree->SetBranchStatus("GL1PScalers_clock_live", 1);
+    tree->SetBranchStatus("GL1PScalers_clock_scaled", 1);
+    tree->SetBranchStatus("GL1PScalers_MBDS_raw", 1);
+    tree->SetBranchStatus("GL1PScalers_MBDS_live", 1);
+    tree->SetBranchStatus("GL1PScalers_MBDS_scaled", 1);
+    tree->SetBranchStatus("GL1PScalers_MBDN_raw", 1);
+    tree->SetBranchStatus("GL1PScalers_MBDN_live", 1);
+    tree->SetBranchStatus("GL1PScalers_MBDN_scaled", 1);
+    tree->SetBranchStatus("GL1PScalers_MBDNS_raw", 1);
+    tree->SetBranchStatus("GL1PScalers_MBDNS_live", 1);
+    tree->SetBranchStatus("GL1PScalers_MBDNS_scaled", 1);
+
     tree->SetBranchAddress("evtID", &evtID);
     tree->SetBranchAddress("evtBCO_gl1", &evtBCO_gl1);
     tree->SetBranchAddress("bunchnumber", &bunchnumber);
@@ -106,6 +120,19 @@ show_eBar_tag(true)
     tree->SetBranchAddress("GL1Scalers_MBDNS_live", &GL1Scalers_MBDNS_live);
     tree->SetBranchAddress("GL1Scalers_MBDNS_scaled", &GL1Scalers_MBDNS_scaled);
 
+    tree->SetBranchAddress("GL1PScalers_clock_raw", &GL1PScalers_clock_raw);
+    tree->SetBranchAddress("GL1PScalers_clock_live", &GL1PScalers_clock_live);
+    tree->SetBranchAddress("GL1PScalers_clock_scaled", &GL1PScalers_clock_scaled);
+    tree->SetBranchAddress("GL1PScalers_MBDS_raw", &GL1PScalers_MBDS_raw);
+    tree->SetBranchAddress("GL1PScalers_MBDS_live", &GL1PScalers_MBDS_live);
+    tree->SetBranchAddress("GL1PScalers_MBDS_scaled", &GL1PScalers_MBDS_scaled);
+    tree->SetBranchAddress("GL1PScalers_MBDN_raw", &GL1PScalers_MBDN_raw);
+    tree->SetBranchAddress("GL1PScalers_MBDN_live", &GL1PScalers_MBDN_live);
+    tree->SetBranchAddress("GL1PScalers_MBDN_scaled", &GL1PScalers_MBDN_scaled);
+    tree->SetBranchAddress("GL1PScalers_MBDNS_raw", &GL1PScalers_MBDNS_raw);
+    tree->SetBranchAddress("GL1PScalers_MBDNS_live", &GL1PScalers_MBDNS_live);
+    tree->SetBranchAddress("GL1PScalers_MBDNS_scaled", &GL1PScalers_MBDNS_scaled);
+
     pre_good_evt = false;
     this_good_evt = false;
 
@@ -117,16 +144,32 @@ show_eBar_tag(true)
     time_MBDS_raw_counting.clear();
     time_MBDN_raw_counting.clear();
     time_MBDNS_raw_counting.clear();
+    
+    time_MBDS_live_counting.clear();
+    time_MBDN_live_counting.clear();
+    time_MBDNS_live_counting.clear();
+
     time_MBDNS_30cm_raw_counting_pair.clear();
     time_LiveTrigger_Decimal.clear();
     time_MBDNS_zvtx.clear();
     time_ZDCNS_zvtx.clear();
     time_detectorNS_raw_counting.clear();
     time_GL1Scalers_range.clear();
+    time_GL1Scalers_live_range.clear();
     step_selected_T_range_V.clear();
     step_counting_range_V.clear();
     step_selected_T_range_H.clear();
     step_counting_range_H.clear();
+
+    time_GL1PScalers_MBDS.clear();
+    time_GL1PScalers_MBDN.clear();
+    time_GL1PScalers_MBDNS.clear();
+    time_GL1PScalers_clock.clear();
+
+    time_GL1PScalers_live_MBDS.clear();
+    time_GL1PScalers_live_MBDN.clear();
+    time_GL1PScalers_live_MBDNS.clear();
+    time_GL1PScalers_live_clock.clear();
     
     Angelika_time_step_vecH.clear();
     Angelika_ZDCNS_rate_vecH.clear();
@@ -393,6 +436,11 @@ void gl1_scaler_ana::PrepareRate(string input_file_directory)
             if (GL1Scalers_MBDN_raw == -999) {pre_good_evt = false; continue;}
             if (GL1Scalers_MBDNS_raw == -999) {pre_good_evt = false; continue;}
 
+            if (GL1PScalers_clock_raw == -999) {pre_good_evt = false; continue;}
+            if (GL1PScalers_MBDNS_raw == -999) {pre_good_evt = false; continue;}
+            if (GL1PScalers_MBDS_raw == -999) {pre_good_evt = false; continue;}
+            if (GL1PScalers_MBDN_raw == -999) {pre_good_evt = false; continue;}
+
             this_good_evt = true;
 
             live_trigger_map.clear(); // note : the live trigger map
@@ -518,6 +566,45 @@ void gl1_scaler_ana::PrepareRate(string input_file_directory)
                 time_MBDNS_raw_counting[ int((GL1Scalers_clock_raw) * bco_span) ].push_back(GL1Scalers_MBDNS_raw);
             }
 
+            
+
+
+            // note : in every second
+            if (time_MBDS_live_counting.find( int((GL1Scalers_clock_raw) * bco_span) ) == time_MBDS_live_counting.end())
+            {
+                time_MBDS_live_counting[ int((GL1Scalers_clock_raw) * bco_span) ] = vector<long long>();
+                time_MBDS_live_counting[ int((GL1Scalers_clock_raw) * bco_span) ].push_back(GL1Scalers_MBDS_live);
+            }
+            else 
+            {
+                time_MBDS_live_counting[ int((GL1Scalers_clock_raw) * bco_span) ].push_back(GL1Scalers_MBDS_live);
+            }
+
+            // note : in every second
+            if (time_MBDN_live_counting.find( int((GL1Scalers_clock_raw) * bco_span) ) == time_MBDN_live_counting.end())
+            {
+                time_MBDN_live_counting[ int((GL1Scalers_clock_raw) * bco_span) ] = vector<long long>();
+                time_MBDN_live_counting[ int((GL1Scalers_clock_raw) * bco_span) ].push_back(GL1Scalers_MBDN_live);
+            }
+            else 
+            {
+                time_MBDN_live_counting[ int((GL1Scalers_clock_raw) * bco_span) ].push_back(GL1Scalers_MBDN_live);
+            }
+
+            // note : in every second
+            if (time_MBDNS_live_counting.find( int((GL1Scalers_clock_raw) * bco_span) ) == time_MBDNS_live_counting.end())
+            {
+                time_MBDNS_live_counting[ int((GL1Scalers_clock_raw) * bco_span) ] = vector<long long>();
+                time_MBDNS_live_counting[ int((GL1Scalers_clock_raw) * bco_span) ].push_back(GL1Scalers_MBDNS_live);
+            }
+            else 
+            {
+                time_MBDNS_live_counting[ int((GL1Scalers_clock_raw) * bco_span) ].push_back(GL1Scalers_MBDNS_live);
+            }
+
+
+
+
             // note : in every second
             if (time_GL1Scalers_range.find( int((GL1Scalers_clock_raw) * bco_span) ) == time_GL1Scalers_range.end())
             {
@@ -526,6 +613,100 @@ void gl1_scaler_ana::PrepareRate(string input_file_directory)
             else 
             {
                 time_GL1Scalers_range[ int((GL1Scalers_clock_raw) * bco_span) ].second = GL1Scalers_clock_raw;
+            }
+
+            // note : in every second
+            if (time_GL1Scalers_live_range.find( int((GL1Scalers_clock_raw) * bco_span) ) == time_GL1Scalers_live_range.end())
+            {
+                time_GL1Scalers_live_range[ int((GL1Scalers_clock_raw) * bco_span) ] = {GL1Scalers_clock_live, -999};
+            }
+            else 
+            {
+                time_GL1Scalers_live_range[ int((GL1Scalers_clock_raw) * bco_span) ].second = GL1Scalers_clock_live;
+            }
+
+            // Division ------------------------------------------------------------------------------------------------------------------------------------
+
+            // note : in every second
+            if ( time_GL1PScalers_clock.find( Form("%d_%d", int((GL1Scalers_clock_raw) * bco_span), bunchnumber) ) == time_GL1PScalers_clock.end() )
+            {
+                time_GL1PScalers_clock[ Form("%d_%d", int((GL1Scalers_clock_raw) * bco_span), bunchnumber) ] = {GL1PScalers_clock_raw, -999};
+            }
+            else 
+            {
+                time_GL1PScalers_clock[ Form("%d_%d", int((GL1Scalers_clock_raw) * bco_span), bunchnumber) ].second = GL1PScalers_clock_raw;
+            }
+
+            // note : in every second
+            if ( time_GL1PScalers_MBDNS.find( Form("%d_%d", int((GL1Scalers_clock_raw) * bco_span), bunchnumber) ) == time_GL1PScalers_MBDNS.end() )
+            {
+                time_GL1PScalers_MBDNS[ Form("%d_%d", int((GL1Scalers_clock_raw) * bco_span), bunchnumber) ] = {GL1PScalers_MBDNS_raw, -999};
+            }
+            else 
+            {
+                time_GL1PScalers_MBDNS[ Form("%d_%d", int((GL1Scalers_clock_raw) * bco_span), bunchnumber) ].second = GL1PScalers_MBDNS_raw;
+            }
+
+            // note : in every second
+            if ( time_GL1PScalers_MBDS.find( Form("%d_%d", int((GL1Scalers_clock_raw) * bco_span), bunchnumber) ) == time_GL1PScalers_MBDS.end() )
+            {
+                time_GL1PScalers_MBDS[ Form("%d_%d", int((GL1Scalers_clock_raw) * bco_span), bunchnumber) ] = {GL1PScalers_MBDS_raw, -999};
+            }
+            else 
+            {
+                time_GL1PScalers_MBDS[ Form("%d_%d", int((GL1Scalers_clock_raw) * bco_span), bunchnumber) ].second = GL1PScalers_MBDS_raw;
+            }
+
+            // note : in every second
+            if ( time_GL1PScalers_MBDN.find( Form("%d_%d", int((GL1Scalers_clock_raw) * bco_span), bunchnumber) ) == time_GL1PScalers_MBDN.end() )
+            {
+                time_GL1PScalers_MBDN[ Form("%d_%d", int((GL1Scalers_clock_raw) * bco_span), bunchnumber) ] = {GL1PScalers_MBDN_raw, -999};
+            }
+            else 
+            {
+                time_GL1PScalers_MBDN[ Form("%d_%d", int((GL1Scalers_clock_raw) * bco_span), bunchnumber) ].second = GL1PScalers_MBDN_raw;
+            }
+
+
+            // note: live
+            // note : in every second
+            if ( time_GL1PScalers_live_clock.find( Form("%d_%d", int((GL1Scalers_clock_raw) * bco_span), bunchnumber) ) == time_GL1PScalers_live_clock.end() )
+            {
+                time_GL1PScalers_live_clock[ Form("%d_%d", int((GL1Scalers_clock_raw) * bco_span), bunchnumber) ] = {GL1PScalers_clock_live, -999};
+            }
+            else 
+            {
+                time_GL1PScalers_live_clock[ Form("%d_%d", int((GL1Scalers_clock_raw) * bco_span), bunchnumber) ].second = GL1PScalers_clock_live;
+            }
+
+            // note : in every second
+            if ( time_GL1PScalers_live_MBDNS.find( Form("%d_%d", int((GL1Scalers_clock_raw) * bco_span), bunchnumber) ) == time_GL1PScalers_live_MBDNS.end() )
+            {
+                time_GL1PScalers_live_MBDNS[ Form("%d_%d", int((GL1Scalers_clock_raw) * bco_span), bunchnumber) ] = {GL1PScalers_MBDNS_live, -999};
+            }
+            else 
+            {
+                time_GL1PScalers_live_MBDNS[ Form("%d_%d", int((GL1Scalers_clock_raw) * bco_span), bunchnumber) ].second = GL1PScalers_MBDNS_live;
+            }
+
+            // note : in every second
+            if ( time_GL1PScalers_live_MBDS.find( Form("%d_%d", int((GL1Scalers_clock_raw) * bco_span), bunchnumber) ) == time_GL1PScalers_live_MBDS.end() )
+            {
+                time_GL1PScalers_live_MBDS[ Form("%d_%d", int((GL1Scalers_clock_raw) * bco_span), bunchnumber) ] = {GL1PScalers_MBDS_live, -999};
+            }
+            else 
+            {
+                time_GL1PScalers_live_MBDS[ Form("%d_%d", int((GL1Scalers_clock_raw) * bco_span), bunchnumber) ].second = GL1PScalers_MBDS_live;
+            }
+
+            // note : in every second
+            if ( time_GL1PScalers_live_MBDN.find( Form("%d_%d", int((GL1Scalers_clock_raw) * bco_span), bunchnumber) ) == time_GL1PScalers_live_MBDN.end() )
+            {
+                time_GL1PScalers_live_MBDN[ Form("%d_%d", int((GL1Scalers_clock_raw) * bco_span), bunchnumber) ] = {GL1PScalers_MBDN_live, -999};
+            }
+            else 
+            {
+                time_GL1PScalers_live_MBDN[ Form("%d_%d", int((GL1Scalers_clock_raw) * bco_span), bunchnumber) ].second = GL1PScalers_MBDN_live;
             }
 
             pre_good_evt = this_good_evt;
@@ -671,11 +852,25 @@ void gl1_scaler_ana::OutputRawRate(string output_file_directory)
     long long MBDNS_raw_counting_front;
     long long MBDNS_raw_counting_back;
 
+
+    long long MBDS_live_counting_front;
+    long long MBDS_live_counting_back;
+
+    long long MBDN_live_counting_front;
+    long long MBDN_live_counting_back;
+
+    long long MBDNS_live_counting_front;
+    long long MBDNS_live_counting_back;
+
+
     long long MBDNS_30cm_raw_counting_first;
     long long MBDNS_30cm_raw_counting_second;
 
     long long GL1Scalers_range_first;
     long long GL1Scalers_range_second;
+
+    long long GL1Scalers_live_range_first;
+    long long GL1Scalers_live_range_second;
 
     vector<double> MBDNS_zvtx_out_vec;
     vector<double> ZDCNS_zvtx_out_vec;
@@ -701,16 +896,84 @@ void gl1_scaler_ana::OutputRawRate(string output_file_directory)
     tree_out -> Branch("MBDNS_raw_counting_front", &MBDNS_raw_counting_front, "MBDNS_raw_counting_front/L");
     tree_out -> Branch("MBDNS_raw_counting_back", &MBDNS_raw_counting_back, "MBDNS_raw_counting_back/L");
 
+    
+
+    tree_out -> Branch("MBDS_live_counting_front", &MBDS_live_counting_front, "MBDS_live_counting_front/L");
+    tree_out -> Branch("MBDS_live_counting_back", &MBDS_live_counting_back, "MBDS_live_counting_back/L");
+
+    tree_out -> Branch("MBDN_live_counting_front", &MBDN_live_counting_front, "MBDN_live_counting_front/L");
+    tree_out -> Branch("MBDN_live_counting_back", &MBDN_live_counting_back, "MBDN_live_counting_back/L");
+
+    tree_out -> Branch("MBDNS_live_counting_front", &MBDNS_live_counting_front, "MBDNS_live_counting_front/L");
+    tree_out -> Branch("MBDNS_live_counting_back", &MBDNS_live_counting_back, "MBDNS_live_counting_back/L");
+
+
+
     tree_out -> Branch("MBDNS_30cm_raw_counting_first", &MBDNS_30cm_raw_counting_first, "MBDNS_30cm_raw_counting_first/L");
     tree_out -> Branch("MBDNS_30cm_raw_counting_second", &MBDNS_30cm_raw_counting_second, "MBDNS_30cm_raw_counting_second/L");
 
     tree_out -> Branch("GL1Scalers_range_first", &GL1Scalers_range_first, "GL1Scalers_range_first/L");
     tree_out -> Branch("GL1Scalers_range_second", &GL1Scalers_range_second, "GL1Scalers_range_second/L");
 
+    tree_out -> Branch("GL1Scalers_live_range_first", &GL1Scalers_live_range_first, "GL1Scalers_live_range_first/L");
+    tree_out -> Branch("GL1Scalers_live_range_second", &GL1Scalers_live_range_second, "GL1Scalers_live_range_second/L");
+
     tree_out -> Branch("MBDNS_zvtx", &MBDNS_zvtx_out_vec);
     tree_out -> Branch("ZDCNS_zvtx", &ZDCNS_zvtx_out_vec);
 
     tree_out -> Branch("LiveTrigger_Decimal", &LiveTrigger_Decimal_out_vec);
+
+    // note : bunch number.
+    std::map<int, std::pair<long long, long long>> this_GL1P_MBDNS_map; this_GL1P_MBDNS_map.clear();
+    std::map<int, std::pair<long long, long long>> this_GL1P_MBDS_map; this_GL1P_MBDS_map.clear();
+    std::map<int, std::pair<long long, long long>> this_GL1P_MBDN_map; this_GL1P_MBDN_map.clear();
+    std::map<int, std::pair<long long, long long>> this_GL1P_clock_map; this_GL1P_clock_map.clear();
+
+    std::map<int, std::pair<long long, long long>> this_GL1P_live_MBDNS_map; this_GL1P_live_MBDNS_map.clear();
+    std::map<int, std::pair<long long, long long>> this_GL1P_live_MBDS_map; this_GL1P_live_MBDS_map.clear();
+    std::map<int, std::pair<long long, long long>> this_GL1P_live_MBDN_map; this_GL1P_live_MBDN_map.clear();
+    std::map<int, std::pair<long long, long long>> this_GL1P_live_clock_map; this_GL1P_live_clock_map.clear();
+
+    std::pair<long long, long long> dummy_pair = {-999,-999};
+
+    for (int i = 0; i < 120; i++) // note : bunch number
+    {
+        this_GL1P_MBDNS_map[i] = {-999,-999};
+        this_GL1P_MBDS_map[i] = {-999,-999};
+        this_GL1P_MBDN_map[i] = {-999,-999};
+        this_GL1P_clock_map[i] = {-999,-999};
+
+        this_GL1P_live_MBDNS_map[i] = {-999,-999};
+        this_GL1P_live_MBDS_map[i] = {-999,-999};
+        this_GL1P_live_MBDN_map[i] = {-999,-999};
+        this_GL1P_live_clock_map[i] = {-999,-999};
+
+        tree_out -> Branch(Form("GL1P_MBDS_raw_counting_front_%d",i), &this_GL1P_MBDS_map[i].first);
+        tree_out -> Branch(Form("GL1P_MBDS_raw_counting_back_%d",i), &this_GL1P_MBDS_map[i].second);
+
+        tree_out -> Branch(Form("GL1P_MBDN_raw_counting_front_%d",i), &this_GL1P_MBDN_map[i].first);
+        tree_out -> Branch(Form("GL1P_MBDN_raw_counting_back_%d",i), &this_GL1P_MBDN_map[i].second);
+
+        tree_out -> Branch(Form("GL1P_MBDNS_raw_counting_front_%d",i), &this_GL1P_MBDNS_map[i].first);
+        tree_out -> Branch(Form("GL1P_MBDNS_raw_counting_back_%d",i), &this_GL1P_MBDNS_map[i].second);
+
+        tree_out -> Branch(Form("GL1P_clock_raw_first_%d",i), &this_GL1P_clock_map[i].first);
+        tree_out -> Branch(Form("GL1P_clock_raw_second_%d",i), &this_GL1P_clock_map[i].second);
+
+        
+
+        tree_out -> Branch(Form("GL1P_MBDS_live_counting_front_%d",i), &this_GL1P_live_MBDS_map[i].first);
+        tree_out -> Branch(Form("GL1P_MBDS_live_counting_back_%d",i), &this_GL1P_live_MBDS_map[i].second);
+
+        tree_out -> Branch(Form("GL1P_MBDN_live_counting_front_%d",i), &this_GL1P_live_MBDN_map[i].first);
+        tree_out -> Branch(Form("GL1P_MBDN_live_counting_back_%d",i), &this_GL1P_live_MBDN_map[i].second);
+
+        tree_out -> Branch(Form("GL1P_MBDNS_live_counting_front_%d",i), &this_GL1P_live_MBDNS_map[i].first);
+        tree_out -> Branch(Form("GL1P_MBDNS_live_counting_back_%d",i), &this_GL1P_live_MBDNS_map[i].second);
+
+        tree_out -> Branch(Form("GL1P_clock_live_first_%d",i), &this_GL1P_live_clock_map[i].first);
+        tree_out -> Branch(Form("GL1P_clock_live_second_%d",i), &this_GL1P_live_clock_map[i].second);
+    }
 
     cout<<"In gl1_scaler_ana::OutputRawRate, "<<00000<<endl;
 
@@ -735,11 +998,25 @@ void gl1_scaler_ana::OutputRawRate(string output_file_directory)
         MBDNS_raw_counting_front = time_MBDNS_raw_counting[pair.first].front();
         MBDNS_raw_counting_back = time_MBDNS_raw_counting[pair.first].back();
 
+
+
+        MBDS_live_counting_front = time_MBDS_live_counting[pair.first].front();
+        MBDS_live_counting_back = time_MBDS_live_counting[pair.first].back();
+
+        MBDN_live_counting_front = time_MBDN_live_counting[pair.first].front();
+        MBDN_live_counting_back = time_MBDN_live_counting[pair.first].back();
+
+        MBDNS_live_counting_front = time_MBDNS_live_counting[pair.first].front();
+        MBDNS_live_counting_back = time_MBDNS_live_counting[pair.first].back();
+
         MBDNS_30cm_raw_counting_first = time_MBDNS_30cm_raw_counting_pair[pair.first].first;
         MBDNS_30cm_raw_counting_second = time_MBDNS_30cm_raw_counting_pair[pair.first].second;
 
         GL1Scalers_range_first = time_GL1Scalers_range[pair.first].first;
         GL1Scalers_range_second = time_GL1Scalers_range[pair.first].second;
+
+        GL1Scalers_live_range_first = time_GL1Scalers_live_range[pair.first].first;
+        GL1Scalers_live_range_second = time_GL1Scalers_live_range[pair.first].second;
 
         cout<<"In gl1_scaler_ana::OutputRawRate, "<<11111<<endl;
 
@@ -754,6 +1031,21 @@ void gl1_scaler_ana::OutputRawRate(string output_file_directory)
         LiveTrigger_Decimal_out_vec = time_LiveTrigger_Decimal[pair.first];
 
         cout<<"In gl1_scaler_ana::OutputRawRate, "<<4444<<endl;
+
+        for (int i = 0; i < 120; i++) // note : bunch number
+        {
+            this_GL1P_MBDNS_map[i] = ( time_GL1PScalers_MBDNS.find(Form("%d_%d", pair.first, i)) != time_GL1PScalers_MBDNS.end() ) ? time_GL1PScalers_MBDNS[ Form("%d_%d", pair.first, i) ] : dummy_pair;
+            this_GL1P_MBDS_map[i] = ( time_GL1PScalers_MBDS.find(Form("%d_%d", pair.first, i)) != time_GL1PScalers_MBDS.end() ) ? time_GL1PScalers_MBDS[ Form("%d_%d", pair.first, i) ] : dummy_pair;
+            this_GL1P_MBDN_map[i] = ( time_GL1PScalers_MBDN.find(Form("%d_%d", pair.first, i)) != time_GL1PScalers_MBDN.end() ) ? time_GL1PScalers_MBDN[ Form("%d_%d", pair.first, i) ] : dummy_pair;
+            this_GL1P_clock_map[i] = ( time_GL1PScalers_clock.find(Form("%d_%d", pair.first, i)) != time_GL1PScalers_clock.end() ) ? time_GL1PScalers_clock[ Form("%d_%d", pair.first, i) ] : dummy_pair;
+
+
+            this_GL1P_live_MBDNS_map[i] = ( time_GL1PScalers_live_MBDNS.find(Form("%d_%d", pair.first, i)) != time_GL1PScalers_live_MBDNS.end() ) ? time_GL1PScalers_live_MBDNS[ Form("%d_%d", pair.first, i) ] : dummy_pair;
+            this_GL1P_live_MBDS_map[i] = ( time_GL1PScalers_live_MBDS.find(Form("%d_%d", pair.first, i)) != time_GL1PScalers_live_MBDS.end() ) ? time_GL1PScalers_live_MBDS[ Form("%d_%d", pair.first, i) ] : dummy_pair;
+            this_GL1P_live_MBDN_map[i] = ( time_GL1PScalers_live_MBDN.find(Form("%d_%d", pair.first, i)) != time_GL1PScalers_live_MBDN.end() ) ? time_GL1PScalers_live_MBDN[ Form("%d_%d", pair.first, i) ] : dummy_pair;
+            this_GL1P_live_clock_map[i] = ( time_GL1PScalers_live_clock.find(Form("%d_%d", pair.first, i)) != time_GL1PScalers_live_clock.end() ) ? time_GL1PScalers_live_clock[ Form("%d_%d", pair.first, i) ] : dummy_pair;
+        }
+
 
         tree_out -> Fill();
     }
